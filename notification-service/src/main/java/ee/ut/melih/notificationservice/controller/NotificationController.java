@@ -39,7 +39,9 @@ public class NotificationController {
   @GetMapping
   @Operation(summary = "List notifications of the current user")
   public List<NotificationResponse> list(
-      @Parameter(hidden = true) @RequestHeader("X-User-Id") UUID userId,
+      @Parameter(description = "Authenticated user id (propagated by the API Gateway)")
+          @RequestHeader("X-User-Id")
+          UUID userId,
       @RequestParam(defaultValue = "0") int page,
       @RequestParam(defaultValue = "20") int size) {
     Pageable pageable = PageRequest.of(page, size);
@@ -49,14 +51,18 @@ public class NotificationController {
   @GetMapping("/unread-count")
   @Operation(summary = "Get the number of unread notifications for the current user")
   public UnreadCountResponse unreadCount(
-      @Parameter(hidden = true) @RequestHeader("X-User-Id") UUID userId) {
+      @Parameter(description = "Authenticated user id (propagated by the API Gateway)")
+          @RequestHeader("X-User-Id")
+          UUID userId) {
     return new UnreadCountResponse(service.unreadCount(userId));
   }
 
   @GetMapping("/{id}")
   @Operation(summary = "Get a single notification owned by the current user")
   public NotificationResponse get(
-      @Parameter(hidden = true) @RequestHeader("X-User-Id") UUID userId,
+      @Parameter(description = "Authenticated user id (propagated by the API Gateway)")
+          @RequestHeader("X-User-Id")
+          UUID userId,
       @PathVariable UUID id) {
     return NotificationResponse.from(service.get(id, userId));
   }
@@ -64,14 +70,18 @@ public class NotificationController {
   @PatchMapping("/read-all")
   @Operation(summary = "Mark all notifications of the current user as read")
   public MarkAllReadResponse markAllRead(
-      @Parameter(hidden = true) @RequestHeader("X-User-Id") UUID userId) {
+      @Parameter(description = "Authenticated user id (propagated by the API Gateway)")
+          @RequestHeader("X-User-Id")
+          UUID userId) {
     return new MarkAllReadResponse(service.markAllRead(userId));
   }
 
   @PatchMapping("/{id}/read")
   @Operation(summary = "Mark a single notification as read")
   public NotificationResponse markRead(
-      @Parameter(hidden = true) @RequestHeader("X-User-Id") UUID userId,
+      @Parameter(description = "Authenticated user id (propagated by the API Gateway)")
+          @RequestHeader("X-User-Id")
+          UUID userId,
       @PathVariable UUID id) {
     return NotificationResponse.from(service.markRead(id, userId));
   }
