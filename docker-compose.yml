@@ -1,0 +1,49 @@
+services:
+  postgres:
+    image: postgres:15-alpine
+    container_name: postgres
+    environment:
+      POSTGRES_DB: order-service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./db/init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  order-service:
+    build:
+      context: ./order-service
+      dockerfile: Dockerfile
+    container_name: order-service
+    ports:
+      - "7001:7001"
+    environment:
+      DB_HOST: postgres
+      DB_NAME: order-service
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+    depends_on:
+      postgres:
+        condition: service_healthy
+
+  user-service:
+    build:
+      context: ./user-service
+      dockerfile: Dockerfile
+    container_name: user-service
+    ports:
+      - "7000:7000"
+    environment:
+      DB_HOST: postgres
+      DB_NAME: user_service
+      DB_USERNAME: postgres
+      DB_PASSWORD: password
+    depends_on:
+      postgres:
+        condition: service_healthy

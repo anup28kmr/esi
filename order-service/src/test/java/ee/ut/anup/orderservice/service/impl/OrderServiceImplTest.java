@@ -1,0 +1,180 @@
+package ee.ut.anup.orderservice.service.impl;
+
+import ee.ut.anup.orderservice.constants.OrderServiceConstants;
+import ee.ut.anup.orderservice.dto.*;
+import ee.ut.anup.orderservice.entity.Order;
+import ee.ut.anup.orderservice.entity.OrderItem;
+import ee.ut.anup.orderservice.entity.User;
+import ee.ut.anup.orderservice.exception.ResourceNotFoundException;
+import ee.ut.anup.orderservice.mapper.OrderItemMapper;
+import ee.ut.anup.orderservice.mapper.OrderMapper;
+import ee.ut.anup.orderservice.repository.OrderRepository;
+import ee.ut.anup.orderservice.repository.UserRepository;
+import org.junit.jupiter.api.BeforeEach;
+import org.junit.jupiter.api.Test;
+import org.junit.jupiter.api.extension.ExtendWith;
+import org.mockito.InjectMocks;
+import org.mockito.Mock;
+import org.mockito.junit.jupiter.MockitoExtension;
+
+import java.math.BigDecimal;
+import java.util.Collections;
+import java.util.List;
+import java.util.Optional;
+
+import static org.junit.jupiter.api.Assertions.*;
+import static org.mockito.ArgumentMatchers.any;
+import static org.mockito.Mockito.*;
+
+@ExtendWith(MockitoExtension.class)
+class OrderServiceImplTest {
+
+    @Mock
+    private OrderRepository orderRepository;
+
+    @Mock
+    private UserRepository userRepository;
+
+    @Mock
+    private OrderMapper orderMapper;
+
+    @Mock
+    private OrderItemMapper orderItemMapper;
+
+    @InjectMocks
+    private OrderServiceImpl orderService;
+
+    private User user;
+    private Order order;
+    private OrderResponse orderResponse;
+
+    @BeforeEach
+    void setUp() {
+        user = new User();
+        user.setUserId(1L);
+        user.setEmail("test@example.com");
+
+        order = new Order();
+        order.setOrderId(1L);
+        order.setUser(user);
+        order.setRestaurantId("rest1");
+        order.setStatus(OrderServiceConstants.STATUS_PENDING);
+        order.setTotalAmount(new BigDecimal("100.00"));
+        order.setItems(Collections.emptyList());
+
+        orderResponse = new OrderResponse(1L, 1L, "rest1", "PENDING", new BigDecimal("100.00"), Collections.emptyList(), true, true);
+    }
+
+    @Test
+    void placeOrder_Success() {
+        PlaceOrderRequest request = new PlaceOrderRequest("rest1", 
+            List.of(new OrderLineRequest("item1", "Item 1", new BigDecimal("50.00"), 2)));
+        
+        when(userRepository.findById(1L)).thenReturn(Optional.of(user));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.mapToResponse(any(Order.class))).thenReturn(orderResponse);
+
+        OrderResponse response = orderService.placeOrder(1L, request);
+
+        assertNotNull(response);
+        assertEquals(orderResponse.orderId(), response.orderId());
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void placeOrder_NewUser_Success() {
+        PlaceOrderRequest request = new PlaceOrderRequest("rest1", Collections.emptyList());
+        
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.mapToResponse(any(Order.class))).thenReturn(orderResponse);
+
+        OrderResponse response = orderService.placeOrder(1L, request);
+
+        assertNotNull(response);
+        verify(userRepository).save(any(User.class));
+        verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void getOrder_Success() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderMapper.mapToResponse(order)).thenReturn(orderResponse);
+
+        OrderResponse response = orderService.getOrder(1L);
+
+        assertNotNull(response);
+        assertEquals(1L, response.orderId());
+    }
+
+    @Test
+    void getOrder_NotFound() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> orderService.getOrder(1L));
+    }
+
+    @Test
+    void cancelOrder_Success() {
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        orderService.cancelOrder(1L);
+
+        assertEquals(OrderServiceConstants.STATUS_CANCELLED, order.getStatus());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void cancelOrder_IllegalState() {
+        order.setStatus(OrderServiceConstants.STATUS_ACCEPTED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> orderService.cancelOrder(1L));
+    }
+
+    @Test
+    void updateOrderStatus_Success() {
+        StatusUpdateRequest request = new StatusUpdateRequest("ACCEPTED");
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.mapToResponse(any(Order.class))).thenReturn(orderResponse.withStatus("ACCEPTED"));
+
+        OrderResponse response = orderService.updateOrderStatus(1L, request);
+
+        assertNotNull(response);
+        assertEquals("ACCEPTED", response.status());
+    }
+
+    @Test
+    void getOrdersByCustomer_Success() {
+        when(orderRepository.findByUser_UserId(1L)).thenReturn(List.of(order));
+        when(orderMapper.mapToResponse(order)).thenReturn(orderResponse);
+
+        List<OrderResponse> responses = orderService.getOrdersByCustomer(1L);
+
+        assertFalse(responses.isEmpty());
+        assertEquals(1, responses.size());
+    }
+
+    @Test
+    void getOrderItems_Success() {
+        OrderItem item = new OrderItem();
+        item.setMenuItemId("m1");
+        item.setName("Item 1");
+        item.setUnitPrice(new BigDecimal("10.00"));
+        item.setQuantity(2);
+        order.setItems(List.of(item));
+
+        OrderItemResponse itemResponse = new OrderItemResponse("m1", "Item 1", new BigDecimal("10.00"), 2);
+
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(orderItemMapper.mapToResponse(item)).thenReturn(itemResponse);
+
+        List<OrderItemResponse> responses = orderService.getOrderItems(1L);
+
+        assertFalse(responses.isEmpty());
+        assertEquals(1, responses.size());
+        assertEquals("m1", responses.get(0).menuItemId());
+    }
+}
