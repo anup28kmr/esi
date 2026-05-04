@@ -26,3 +26,10 @@ replay_pid*
 /.idea/jarRepositories.xml
 /.idea/encodings.xml
 /.idea/.gitignore
+
+# IDE files
+.idea/
+.vscode/
+.cursor/
+.claude/
+project_files/
