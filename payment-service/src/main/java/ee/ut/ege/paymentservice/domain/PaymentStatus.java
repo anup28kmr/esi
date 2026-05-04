@@ -1,0 +1,5 @@
+package ee.ut.ege.paymentservice.domain;
+
+public enum PaymentStatus {
+    PENDING, COMPLETED, FAILED, REFUNDED
+}
