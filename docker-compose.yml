@@ -1,15 +1,32 @@
 services:
-  postgres:
+  postgres-order:
     image: postgres:15-alpine
-    container_name: postgres
+    container_name: postgres-order
     environment:
       POSTGRES_DB: order-service
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
     volumes:
-      - ./db/init/01-create-databases.sql:/docker-entrypoint-initdb.d/01-create-databases.sql:ro
+      - ./db/init/01-create-databases-order.sql:/docker-entrypoint-initdb.d/01-create-databases-order.sql:ro
     ports:
       - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U postgres"]
+      interval: 10s
+      timeout: 5s
+      retries: 5
+
+  postgres-user:
+    image: postgres:15-alpine
+    container_name: postgres-user
+    environment:
+      POSTGRES_DB: user_service
+      POSTGRES_USER: postgres
+      POSTGRES_PASSWORD: password
+    volumes:
+      - ./db/init/01-create-databases-user.sql:/docker-entrypoint-initdb.d/01-create-databases-user.sql:ro
+    ports:
+      - "5433:5432"
     healthcheck:
       test: ["CMD-SHELL", "pg_isready -U postgres"]
       interval: 10s
@@ -24,12 +41,12 @@ services:
     ports:
       - "7001:7001"
     environment:
-      DB_HOST: postgres
+      DB_HOST: postgres-order
       DB_NAME: order-service
       DB_USERNAME: postgres
       DB_PASSWORD: password
     depends_on:
-      postgres:
+      postgres-order:
         condition: service_healthy
 
   user-service:
@@ -40,10 +57,15 @@ services:
     ports:
       - "7000:7000"
     environment:
-      DB_HOST: postgres
+      DB_HOST: postgres-user
       DB_NAME: user_service
       DB_USERNAME: postgres
       DB_PASSWORD: password
+      SPRING_PROFILES_ACTIVE: docker
+    volumes:
+      - ./user-service/src:/app/src          # Mount only source code
+      - ./user-service/pom.xml:/app/pom.xml  # Optional: for dependency changes
+      # Do NOT mount the whole /app
     depends_on:
-      postgres:
+      postgres-user:
         condition: service_healthy

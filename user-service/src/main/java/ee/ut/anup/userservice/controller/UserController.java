@@ -1,7 +1,7 @@
 package ee.ut.anup.userservice.controller;
 
 import ee.ut.anup.userservice.dto.AddressDTO;
-import ee.ut.anup.userservice.dto.ErrorResponse;
+import ee.ut.anup.userservice.dto.ErrorResponseDTO;
 import ee.ut.anup.userservice.dto.UserDTO;
 import ee.ut.anup.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -14,7 +14,9 @@ import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
+import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
+import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
 
@@ -25,6 +27,23 @@ import java.util.List;
 public class UserController {
 
   private final UserService userService;
+  private final RestTemplate restTemplate;
+
+  @Operation(
+      summary = "Get dummy restaurants from restaurant-service",
+      description = "Call the future restaurant-service to get dummy data")
+  @GetMapping("/dummy-restaurants")
+  public ResponseEntity<Object> getDummyRestaurants() {
+    String restaurantServiceUrl = "http://restaurant-service/restaurants";
+    try {
+      // This is a dummy call to a service that doesn't exist yet
+      Object restaurants = restTemplate.getForObject(restaurantServiceUrl, Object.class);
+      return ResponseEntity.ok(restaurants);
+    } catch (Exception e) {
+      return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
+          .body("Restaurant service is currently unavailable (Dummy call)");
+    }
+  }
 
   @Operation(
       summary = "Register a new user account",
@@ -37,7 +56,7 @@ public class UserController {
     @ApiResponse(
         responseCode = "400",
         description = "Invalid request",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
@@ -56,7 +75,7 @@ public class UserController {
     @ApiResponse(
         responseCode = "404",
         description = "User not found",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @GetMapping("/{id}")
   public UserDTO getUserProfile(@PathVariable Long id) {
@@ -74,11 +93,11 @@ public class UserController {
     @ApiResponse(
         responseCode = "400",
         description = "Invalid request",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class))),
     @ApiResponse(
         responseCode = "404",
         description = "User not found",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @PutMapping("/{id}")
   public UserDTO updateUserProfile(@PathVariable Long id, @Valid @RequestBody UserDTO userDTO) {
@@ -97,7 +116,7 @@ public class UserController {
     @ApiResponse(
         responseCode = "404",
         description = "User not found",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @GetMapping("/{id}/addresses")
   public List<AddressDTO> getUserAddresses(@PathVariable Long id) {
@@ -115,11 +134,11 @@ public class UserController {
     @ApiResponse(
         responseCode = "400",
         description = "Invalid request",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class))),
     @ApiResponse(
         responseCode = "404",
         description = "User not found",
-        content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+        content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @PostMapping("/{id}/addresses")
   @ResponseStatus(HttpStatus.CREATED)

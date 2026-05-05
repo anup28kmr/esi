@@ -1,7 +1,6 @@
 package ee.ut.anup.userservice.controller;
 
 import ee.ut.anup.userservice.dto.DriverProfileDTO;
-import ee.ut.anup.userservice.dto.ErrorResponse;
 import ee.ut.anup.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.ArraySchema;

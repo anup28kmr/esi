@@ -1,33 +1,35 @@
-# Use an official OpenJDK runtime as a parent image
+# ================== BUILD STAGE ==================
 FROM eclipse-temurin:21-jdk-jammy AS build
 WORKDIR /app
 
-# Copy the mvnw, .mvn, and pom.xml files
 COPY mvnw .
 COPY .mvn .mvn
 COPY pom.xml .
-
-# Give execution permission to mvnw
 RUN chmod +x mvnw
 
-# Download dependencies
-RUN ./mvnw dependency:go-offline
+# Download dependencies first (better caching)
+RUN ./mvnw dependency:go-offline -B
 
-# Copy the source code
 COPY src src
-
-# Build the application
 RUN ./mvnw package -DskipTests
 
-# Use a smaller runtime image
+# ================== DEVELOPMENT STAGE ==================
 FROM eclipse-temurin:21-jre-jammy
+
 WORKDIR /app
 
-# Copy the jar file from the build stage
+# Copy the built jar from build stage
 COPY --from=build /app/target/*.jar app.jar
 
-# Expose the port
+# Expose port (change to 7001 for order-service)
 EXPOSE 7000
 
-# Run the application
-ENTRYPOINT ["java", "-jar", "app.jar"]
+# For better development experience
+ENV JAVA_OPTS="-Dspring.devtools.restart.enabled=true"
+
+# Run with extra options useful for development
+ENTRYPOINT ["java", \
+            "-Djava.security.egd=file:/dev/./urandom", \
+            "-Dspring.profiles.active=docker", \
+            "-jar", \
+            "app.jar"]

@@ -1,8 +1,8 @@
 package ee.ut.anup.userservice.controller;
 
-import ee.ut.anup.userservice.dto.ErrorResponse;
-import ee.ut.anup.userservice.dto.LoginRequest;
-import ee.ut.anup.userservice.dto.LoginResponse;
+import ee.ut.anup.userservice.dto.ErrorResponseDTO;
+import ee.ut.anup.userservice.dto.LoginRequestDTO;
+import ee.ut.anup.userservice.dto.LoginResponseDTO;
 import ee.ut.anup.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.media.Content;
@@ -28,12 +28,12 @@ public class AuthController {
     @Operation(summary = "Sign in", description = "Sign in and return the authenticated user context/token")
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Login successful",
-                    content = @Content(schema = @Schema(implementation = LoginResponse.class))),
+                    content = @Content(schema = @Schema(implementation = LoginResponseDTO.class))),
             @ApiResponse(responseCode = "401", description = "Invalid credentials",
-                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+                    content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
     })
     @PostMapping("/login")
-    public LoginResponse login(@Valid @RequestBody LoginRequest loginRequest) {
-        return userService.login(loginRequest);
+    public LoginResponseDTO login(@Valid @RequestBody LoginRequestDTO loginRequestDTO) {
+        return userService.login(loginRequestDTO);
     }
 }

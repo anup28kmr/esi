@@ -1,11 +1,24 @@
 package ee.ut.anup.userservice.controller;
 
+import static org.mockito.ArgumentMatchers.eq;
+import static org.mockito.Mockito.verify;
+import static org.mockito.Mockito.when;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.content;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
+import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+
 import com.fasterxml.jackson.databind.ObjectMapper;
 import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import ee.ut.anup.userservice.dto.AddressDTO;
 import ee.ut.anup.userservice.dto.UserDTO;
 import ee.ut.anup.userservice.entity.User;
+import ee.ut.anup.userservice.exception.GlobalExceptionHandler;
 import ee.ut.anup.userservice.service.UserService;
+import java.util.List;
+import java.util.Map;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -15,18 +28,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.http.MediaType;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
-
-import java.time.LocalDateTime;
-import java.util.List;
-
-import static org.mockito.ArgumentMatchers.eq;
-import static org.mockito.Mockito.verify;
-import static org.mockito.Mockito.when;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.put;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
-import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
+import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
@@ -38,6 +40,9 @@ class UserControllerTest {
     @Mock
     private UserService userService;
 
+    @Mock
+    private RestTemplate restTemplate;
+
     @InjectMocks
     private UserController userController;
 
@@ -45,7 +50,34 @@ class UserControllerTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         objectMapper.registerModule(new JavaTimeModule());
-        mockMvc = MockMvcBuilders.standaloneSetup(userController).build();
+        mockMvc = MockMvcBuilders.standaloneSetup(userController)
+                .setControllerAdvice(new GlobalExceptionHandler())
+                .build();
+    }
+
+    @Test
+    void getDummyRestaurants_shouldReturnRestaurants_whenServiceAvailable() throws Exception {
+        List<Map<String, String>> mockResponse = List.of(
+                Map.of("id", "1", "name", "Resto A"),
+                Map.of("id", "2", "name", "Resto B")
+        );
+        when(restTemplate.getForObject("http://restaurant-service/restaurants", Object.class))
+                .thenReturn(mockResponse);
+
+        mockMvc.perform(get("/users/dummy-restaurants"))
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].name").value("Resto A"))
+                .andExpect(jsonPath("$[1].name").value("Resto B"));
+    }
+
+    @Test
+    void getDummyRestaurants_shouldReturnServiceUnavailable_whenServiceFails() throws Exception {
+        when(restTemplate.getForObject("http://restaurant-service/restaurants", Object.class))
+                .thenThrow(new RuntimeException("Service down"));
+
+        mockMvc.perform(get("/users/dummy-restaurants"))
+                .andExpect(status().isServiceUnavailable())
+                .andExpect(content().string("Restaurant service is currently unavailable (Dummy call)"));
     }
 
     @Test
@@ -58,7 +90,8 @@ class UserControllerTest {
                 "+3720000000",
                 User.Role.CUSTOMER,
                 null,
-                null);
+                null
+        );
         UserDTO response = new UserDTO(
                 1L,
                 "john@example.com",
@@ -67,7 +100,7 @@ class UserControllerTest {
                 "+3720000000",
                 User.Role.CUSTOMER,
                 User.Status.ACTIVE,
-                LocalDateTime.of(2026, 5, 4, 10, 0));
+                null);
         when(userService.registerUser(eq(request))).thenReturn(response);
 
         mockMvc.perform(post("/users")
@@ -110,7 +143,7 @@ class UserControllerTest {
                 "+372111111",
                 User.Role.DRIVER,
                 User.Status.ACTIVE,
-                LocalDateTime.of(2026, 5, 4, 11, 0));
+                null);
         when(userService.getUserProfile(11L)).thenReturn(response);
 
         mockMvc.perform(get("/users/{id}", 11L))
@@ -139,7 +172,7 @@ class UserControllerTest {
                 "+372222222",
                 User.Role.CUSTOMER,
                 User.Status.ACTIVE,
-                LocalDateTime.of(2026, 5, 4, 12, 0));
+                null);
         when(userService.updateUserProfile(8L, request)).thenReturn(response);
 
         mockMvc.perform(put("/users/{id}", 8L)
@@ -182,4 +215,6 @@ class UserControllerTest {
 
         verify(userService).addUserAddress(3L, request);
     }
+
+    
 }
