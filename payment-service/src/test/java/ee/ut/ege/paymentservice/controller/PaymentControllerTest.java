@@ -1,6 +1,7 @@
 package ee.ut.ege.paymentservice.controller;
 
 import com.fasterxml.jackson.databind.ObjectMapper;
+import com.fasterxml.jackson.datatype.jsr310.JavaTimeModule;
 import ee.ut.ege.paymentservice.domain.PaymentStatus;
 import ee.ut.ege.paymentservice.dto.CreatePaymentRequest;
 import ee.ut.ege.paymentservice.dto.PaymentResponse;
@@ -39,8 +40,7 @@ class PaymentControllerTest {
     @Autowired
     private MockMvc mockMvc;
 
-    @Autowired
-    private ObjectMapper objectMapper;
+    private final ObjectMapper objectMapper = new ObjectMapper().registerModule(new JavaTimeModule());
 
     @MockitoBean
     private PaymentService paymentService;
