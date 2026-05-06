@@ -1,0 +1,296 @@
+% checkpoint-script.tex
+% Operating script for the live Checkpoint 2 demo.
+% Audience: Sten-Qy-Li (Sierra-Lima), Group 7. Read silently, do exactly.
+% Built against repo tag `checkpoint-2` (commit ee51ceb).
+% Scope: restaurant-service/ and menu-service/ -- Sierra-Lima's slice.
+
+\documentclass[11pt]{article}
+
+\usepackage[utf8]{inputenc}
+\usepackage[T1]{fontenc}
+\usepackage[a4paper, margin=2cm]{geometry}
+\usepackage{xcolor}
+\usepackage{graphicx}
+\usepackage{float}
+\usepackage{enumitem}
+\usepackage{parskip}
+\usepackage{hyperref}
+\usepackage{tcolorbox}
+\tcbuselibrary{breakable, skins, listings}
+\usepackage{listings}
+
+\lstset{
+  basicstyle=\ttfamily\footnotesize,
+  breaklines=true,
+  breakatwhitespace=false,
+  columns=fullflexible,
+  keepspaces=true,
+  showstringspaces=false,
+  postbreak=\mbox{\textcolor{gray}{$\hookrightarrow$}\space},
+  frame=none
+}
+
+\newtcolorbox{saybox}{breakable, colback=blue!4, colframe=blue!50!black,
+  fonttitle=\bfseries, title=SAY, left=2mm, right=2mm, top=1mm, bottom=1mm}
+\newtcolorbox{dobox}{enhanced jigsaw, breakable, colback=gray!8, colframe=gray!60!black,
+  fonttitle=\bfseries, title=DO, left=2mm, right=2mm, top=1mm, bottom=1mm}
+\newtcolorbox{seebox}{breakable, colback=green!4, colframe=green!55!black,
+  fonttitle=\bfseries, title=SEE, left=2mm, right=2mm, top=1mm, bottom=1mm}
+\newtcolorbox{provesbox}{breakable, colback=yellow!10, colframe=orange!80!black,
+  fonttitle=\bfseries, title=PROVES, left=2mm, right=2mm, top=1mm, bottom=1mm}
+
+\title{Checkpoint 2 Operating Script\\
+  \large Sierra-Lima slice: \texttt{restaurant-service} + \texttt{menu-service}\\
+  \large Group 7, Sten-Qy-Li}
+\date{2026-05-12, 14:15--14:30 EET (15 minutes)}
+\author{}
+
+\begin{document}
+\maketitle
+
+\section{Pre-flight checklist}
+
+Open these BEFORE the instructor sits down. Each item: open the app, verify it is ready as described.
+
+\begin{itemize}[leftmargin=*]
+  \item \textbf{Docker Desktop} -- ready when the whale icon in the system tray stops animating and the Dashboard reads \emph{Engine running}.
+  \item \textbf{IntelliJ IDEA} -- open the project at \texttt{C:\textbackslash MSc-Computer-Science\textbackslash Semester-2\textbackslash esi\textbackslash esi}; ready when the Project tool window shows the seven service folders and no progress bar runs at the bottom.
+  \item \textbf{Windows Terminal / PowerShell} -- one window, working directory set to the project root: \texttt{cd C:\textbackslash MSc-Computer-Science\textbackslash Semester-2\textbackslash esi\textbackslash esi}.
+  \item \textbf{A browser} -- one fresh window with no tabs (open new tabs during scenes).
+\end{itemize}
+
+\textbf{Pre-warm the stack 10 minutes before the meeting starts so the first-time Maven + npm build does not eat your demo time:}
+
+\begin{dobox}
+In the PowerShell window opened above:
+\begin{lstlisting}
+git checkout checkpoint-2
+docker compose up -d --build
+\end{lstlisting}
+\end{dobox}
+
+\begin{seebox}
+First-time build takes 3--5 minutes. Run \texttt{docker compose ps} repeatedly until all six services show \texttt{(healthy)}. Subsequent runs after that come up in under a minute.
+\end{seebox}
+
+\subsection*{Already done by tagging this release}
+
+\begin{itemize}[leftmargin=*]
+  \item[$\checkmark$] \texttt{checkpoint-2} tag exists on \texttt{origin/sten} pointing at commit \texttt{ee51ceb}.
+  \item[$\checkmark$] All Sierra-Lima changes committed and pushed to \texttt{origin/sten}; working tree is clean.
+  \item[$\checkmark$] Group 7 demo slot for 14:15--14:30 on 2026-05-12 confirmed in the Moodle poll.
+\end{itemize}
+
+\section{Setup}
+
+(In the PowerShell terminal opened in pre-flight, project root.)
+
+\begin{dobox}
+\begin{lstlisting}
+git checkout checkpoint-2
+\end{lstlisting}
+\end{dobox}
+
+\begin{seebox}
+\texttt{HEAD is now at ee51ceb Add Checkpoint 2 runtime stack to sten}
+\end{seebox}
+
+\begin{dobox}
+\begin{lstlisting}
+docker compose ps
+\end{lstlisting}
+\end{dobox}
+
+\begin{seebox}
+All six containers show \texttt{Up X (healthy)}: \texttt{restaurant-db}, \texttt{menu-db}, \texttt{restaurant-service}, \texttt{menu-service}, \texttt{gateway}, \texttt{frontend}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/setup-1.png}
+  \caption{\texttt{docker compose ps} output: all six services healthy.}
+\end{figure}
+\end{seebox}
+
+\section{Demonstration scenes}
+
+\subsection{Scene 1 -- Item A: second service runs (4 points)}
+
+\begin{saybox}
+``Both my services start from one compose file with their own Postgres databases.''
+\end{saybox}
+
+\begin{dobox}
+In the browser, open these three tabs (one at a time, one per Ctrl+T):
+\begin{lstlisting}
+http://localhost:8081/swagger-ui.html
+http://localhost:8082/swagger-ui.html
+\end{lstlisting}
+Then back in PowerShell, run:
+\begin{lstlisting}
+curl.exe -s "http://localhost:8080/restaurants?size=2"
+\end{lstlisting}
+And:
+\begin{lstlisting}
+curl.exe -s "http://localhost:8080/restaurants/d0000001-0000-0000-0000-000000000001/menu-items"
+\end{lstlisting}
+\end{dobox}
+
+\begin{seebox}
+Tab 1 (\texttt{:8081}): the restaurant-service Swagger UI lists six endpoints under \texttt{restaurant-controller} (POST/GET list/GET id/PUT/PATCH status/GET availability), covering R19 register/manage and R20 open-closed status.
+
+Tab 2 (\texttt{:8082}): the menu-service Swagger UI lists six endpoints under \texttt{menu-controller} (POST/GET list-by-restaurant/GET id/PUT/DELETE/POST validate), covering R21 owner-gated CRUD and R22 browse menu.
+
+The first \texttt{curl.exe} prints a paged JSON with \texttt{"totalElements":6} -- the six restaurants seeded by Flyway migration \texttt{V2\_\_seed\_demo\_data.sql} into \texttt{restaurant-db}. The second \texttt{curl.exe} prints a JSON array with four menu items for Pizza Antonio (\texttt{d0000001}), seeded into \texttt{menu-db}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene1-step1.png}
+  \caption{restaurant-service Swagger UI on \texttt{:8081} listing the six endpoints.}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene1-step2.png}
+  \caption{menu-service Swagger UI on \texttt{:8082} listing the six endpoints.}
+\end{figure}
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene1-step3.png}
+  \caption{PowerShell \texttt{curl.exe} output: paged JSON of six restaurants from \texttt{restaurant-db}, followed by the JSON array of four menu items from \texttt{menu-db}.}
+\end{figure}
+\end{seebox}
+
+\begin{provesbox}
+\textbf{[BASE]} ``Second Responsibility: Second service OR integration component runs.'' \emph{(4 points; Project2026.pdf p.~4.)} The same scene also satisfies the three Checkpoint-1 sub-criteria the brief explicitly inherits for the second service via the IMPORTANT note (``just implement the points A, B, and D applied to service implementation in Checkpoint 1''):
+\begin{itemize}[leftmargin=*]
+  \item ``A. Running Service: Service starts and endpoints are accessible.'' (\texttt{docker compose ps} shows both services healthy; their endpoints answer.)
+  \item ``B. API Implementation: All endpoints implemented according to Assignment 3.'' (Six endpoints per service in Swagger, matching the R19--R22 surface from Assignment 3.)
+  \item ``D. Persistence: Database connected, and some data stored and retrieved.'' (Six restaurants and four menu items returned from real Postgres via Flyway migrations.)
+\end{itemize}
+\end{provesbox}
+
+\subsection{Scene 2 -- Item B: live cross-service hop, real call not mocked (2 points)}
+
+\begin{saybox}
+``Now I'll show menu-service calling restaurant-service over real HTTP for an ownership check.''
+\end{saybox}
+
+\begin{dobox}
+In PowerShell, run the positive case (a JWT for the owner of restaurant \texttt{d0000001}, pre-minted with the dev secret from \texttt{application.properties}):
+\begin{lstlisting}
+curl.exe -i -X POST `
+  "http://localhost:8080/restaurants/d0000001-0000-0000-0000-000000000001/menu-items" `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJxdWlja2JpdGUtdXNlci1zZXJ2aWNlIiwic3ViIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwidXNlcklkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAxIiwicm9sZSI6IlJlc3RhdXJhbnRPd25lciIsInRva2VuVHlwZSI6IlVTRVIiLCJpYXQiOjE3NzgwODg0NTAsImV4cCI6MTg5MzQ1NjAwMH0.iQUGu1X-tIAFVEtAUM4BMINT5RJ0zPVvY-s8pHElu48" `
+  -H "Content-Type: application/json" `
+  --data-raw '{"name":"Demo Hop","priceAmount":3.33,"priceCurrency":"EUR","category":"Main"}'
+\end{lstlisting}
+\end{dobox}
+
+\begin{seebox}
+First line: \texttt{HTTP/1.1 201 Created}. Body is the new menu item with a fresh \texttt{menuItemId} and \texttt{restaurantId":"d0000001-0000-0000-0000-000000000001"}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene2-step1.png}
+  \caption{Positive case: HTTP 201 with the created menu-item JSON.}
+\end{figure}
+\end{seebox}
+
+\begin{saybox}
+``And here's why the lookup must be real -- a different owner's token gets rejected.''
+\end{saybox}
+
+\begin{dobox}
+In PowerShell, run the negative case (a JWT for a DIFFERENT user who owns other restaurants but not \texttt{d0000001}):
+\begin{lstlisting}
+curl.exe -i -X POST `
+  "http://localhost:8080/restaurants/d0000001-0000-0000-0000-000000000001/menu-items" `
+  -H "Authorization: Bearer eyJhbGciOiJIUzI1NiIsInR5cCI6IkpXVCJ9.eyJpc3MiOiJxdWlja2JpdGUtdXNlci1zZXJ2aWNlIiwic3ViIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwidXNlcklkIjoiMDAwMDAwMDAtMDAwMC0wMDAwLTAwMDAtMDAwMDAwMDAwMDAyIiwicm9sZSI6IlJlc3RhdXJhbnRPd25lciIsInRva2VuVHlwZSI6IlVTRVIiLCJpYXQiOjE3NzgwODg0NTAsImV4cCI6MTg5MzQ1NjAwMH0.KxoEi_WDtGFWzGky1q8nbw41ghr_zx0oZMl6qNP02A8" `
+  -H "Content-Type: application/json" `
+  --data-raw '{"name":"Should be rejected","priceAmount":1.00,"priceCurrency":"EUR","category":"Main"}'
+\end{lstlisting}
+\end{dobox}
+
+\begin{seebox}
+First line: \texttt{HTTP/1.1 403 Forbidden}. Body contains \texttt{"User 00000000-0000-0000-0000-000000000002 does not own restaurant d0000001-0000-0000-0000-000000000001"}.
+
+The \texttt{ownerId} that menu-service used to reject the request is not stored anywhere in \texttt{menu-db} -- menu-service only keeps \texttt{restaurantId} as a UUID reference (no foreign key, no copy of ownership). The only way menu-service learned that ownerId is via the live HTTPS call to \texttt{restaurant-service:8081/restaurants/d0000001-...}.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene2-step2.png}
+  \caption{Negative case: HTTP 403 with the ownership-denial message containing the \texttt{ownerId} learned via the cross-service lookup.}
+\end{figure}
+\end{seebox}
+
+\begin{provesbox}
+\textbf{[BASE]} ``Basic Integration: At least one working interaction between two implemented services must be demonstrated (real call, not mocked).'' \emph{(2 points; Project2026.pdf p.~4.)} The 403 response contains an \texttt{ownerId} that menu-service does not persist locally; it could only have been learned through the live HTTP call to \texttt{restaurant-service}. The implementation is in \texttt{menu-service/src/main/java/ee/ut/esi/quickbite/menu/security/RestaurantOwnershipClient.java}.
+\end{provesbox}
+
+\subsection{Scene 3 -- Item C: initial frontend (2 points)}
+
+\begin{saybox}
+``And here's the frontend, hitting both my services through the gateway.''
+\end{saybox}
+
+\begin{dobox}
+In the browser, open a new tab to \texttt{http://localhost:8090}. Open Chrome DevTools (\texttt{F12}) and switch to the Network tab. Then click \textbf{Restaurants} in the top nav.
+\end{dobox}
+
+\begin{seebox}
+The page renders six restaurant cards: Pizza Antonio (Tartu), Sushi Lumi (Tartu), Cafe Nero (Tartu), Burger Bros (Tallinn), Vegan Vibes (Tallinn), Pasta Palace (Tallinn). The Network tab shows one request: \texttt{GET http://localhost:8080/restaurants} returning \texttt{200} with a paged JSON body.
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene3-step1.png}
+  \caption{Frontend at \texttt{:8090} after clicking Restaurants: six cards rendered from the live \texttt{GET /restaurants} call to the gateway.}
+\end{figure}
+\end{seebox}
+
+\begin{dobox}
+In the browser, click on the \emph{Pizza Antonio} card.
+\end{dobox}
+
+\begin{seebox}
+The detail view loads with Pizza Antonio's address (Ruutli 12, Tartu), operating hours (11:00--22:00), and an \emph{Open / Closed} badge. Below it, the menu lists Margherita, Quattro Formaggi, Tiramisu, Garlic Bread, and any items added during Scene 2. The Network tab shows two new calls: \texttt{GET /restaurants/d0000001-0000-0000-0000-000000000001} (200) and \texttt{GET /restaurants/d0000001-0000-0000-0000-000000000001/menu-items} (200).
+
+\begin{figure}[H]
+  \centering
+  \includegraphics[width=0.95\linewidth]{screenshots/scene3-step2.png}
+  \caption{Restaurant detail view: live data from \texttt{restaurant-service} and \texttt{menu-service}, both fetched through the gateway by the SPA.}
+\end{figure}
+\end{seebox}
+
+\begin{provesbox}
+\textbf{[BASE]} ``Frontend: The frontend exists. It calls at least one backend endpoint (per student) and displays real data.'' \emph{(2 points; Project2026.pdf p.~4.)} The Vue 3 SPA in \texttt{frontend/src/views/RestaurantListView.vue} calls \texttt{GET /restaurants}; \texttt{RestaurantDetailView.vue} additionally calls \texttt{GET /restaurants/\{id\}} and \texttt{GET /restaurants/\{id\}/menu-items}. All three are Sierra-Lima endpoints; the data on screen is fetched live from the running services.
+\end{provesbox}
+
+\section{Wrap-up}
+
+\begin{saybox}
+``That's the Checkpoint 2 deliverable -- happy to take questions.''
+\end{saybox}
+
+\begin{dobox}
+After the instructor confirms they are done, in PowerShell:
+\begin{lstlisting}
+docker compose down
+\end{lstlisting}
+Close the browser tabs and the IntelliJ window.
+\end{dobox}
+
+\begin{seebox}
+\texttt{[+] Running 7/7} with each container marked \texttt{Removed}. Network \texttt{quickbite\_quickbite-net} also \texttt{Removed}.
+\end{seebox}
+
+\section{If something goes wrong}
+
+\begin{itemize}[leftmargin=*]
+  \item[$\diamond$] \textbf{Docker Desktop is unreachable} (error \texttt{error during connect: ... open //./pipe/docker\_engine}): in a NEW PowerShell window run \texttt{wsl -{}-shutdown}, wait five seconds, reopen Docker Desktop, wait until the whale icon stops animating, then re-run the failing command.
+  \item[$\diamond$] \textbf{Port already allocated} (error \texttt{Bind for 0.0.0.0:8080 failed}): in PowerShell run \texttt{docker compose down}, then \texttt{docker ps} to find any leftover container holding the port, then \texttt{docker rm -f <container-id>} on it, then \texttt{docker compose up -d}.
+  \item[$\diamond$] \textbf{A container is unhealthy} after a long wait: in PowerShell run \texttt{docker compose logs <service-name> -{}-tail 80} (substitute \texttt{restaurant-service}, \texttt{menu-service}, \texttt{gateway}, or \texttt{frontend}), read the last error, then \texttt{docker compose restart <service-name>}; re-run \texttt{docker compose ps} until it shows \texttt{(healthy)}.
+  \item[$\diamond$] \textbf{The Scene 2 \texttt{curl.exe} returns 401 Unauthorized}: the JWT was probably mistyped or split across lines. Re-paste the full \texttt{Authorization: Bearer ...} header from this script as a single line (no line breaks inside the token), keeping the backticks at the end of each continuation line.
+  \item[$\diamond$] \textbf{The Scene 3 frontend page is blank or shows a loading spinner forever}: in DevTools Network tab, look for a failed call to \texttt{:8080}. If it shows \texttt{(failed) net::ERR\_CONNECTION\_REFUSED}, the gateway is down -- run \texttt{docker compose ps gateway} and \texttt{docker compose restart gateway}, then refresh the page.
+  \item[$\diamond$] \textbf{Total wipe and rebuild} (only if nothing above helps): in PowerShell run \texttt{docker compose down -v}, then \texttt{docker compose up -d -{}-build}, and wait the full 3--5 minutes for it to come back up.
+\end{itemize}
+
+\end{document}
