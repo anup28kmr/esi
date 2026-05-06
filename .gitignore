@@ -22,10 +22,17 @@
 # virtual machine crash logs, see http://www.java.com/en/download/help/error_hotspot.xml
 hs_err_pid*
 replay_pid*
+/.idea/modules.xml
+/.idea/jarRepositories.xml
+/.idea/encodings.xml
+/.idea/.gitignore
 
-# IDE / editor local settings
+# IDE files
 .idea/
+.vscode/
+.cursor/
 .claude/
+project_files/
 *.iml
 
 # Maven

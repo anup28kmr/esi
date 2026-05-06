@@ -1,89 +1,41 @@
-# esi (Sierra-Lima slice)
+# Enterprise System Integration in a Food-Delivery App
 
-Sierra-Lima's contribution to Group 7 of MTAT.03.229 (2026 ESI
-QuickBite). This branch (`sten`) is the Sierra-Lima counterpart to
-Alfa-Kilo's `anup` branch and contains two Spring Boot microservices:
+Project spec: https://courses.cs.ut.ee/2026/esi/spring/Main/Lectures?action=download&upname=Project2026.pdf
 
-| Service | Requirement | Tests | Java package |
-|---|---|---|---|
-| `menu-service/` | R21 add/update/remove menu items, R22 browse menu | 47 | `ee.ut.esi.quickbite.menu` |
-| `restaurant-service/` | R19 register/manage restaurant, R20 update open/closed and operating hours | 33 | `ee.ut.esi.quickbite.restaurant` |
+For grading of project work by Group 7 at the Checkpoint 2 stage.
 
-Maven `groupId` for both services is `ee.ut.esi.quickbite`. Each
-service is a self-contained Maven project (its own `pom.xml`,
-`Dockerfile`, Flyway migrations, and per-service PostgreSQL
-database).
+## Grading rubrics for Checkpoint 2
 
-For per-service detail, layout, and API surface see
-[`menu-service/README.md`](menu-service/README.md) and
-[`restaurant-service/README.md`](restaurant-service/README.md).
+**Total: 8 points.** Deadline: last commit at **12 May 2026, 14:00 (Estonian time)**; team discussions start the same day at 14:15.
 
-## Run each service locally
+**Goal:** Complete backend responsibilities and start system integration. Security is not assessed at this checkpoint (it is graded at Checkpoint 3).
 
-```bash
-( cd menu-service       && mvn clean test )    # 47/47 pass
-( cd restaurant-service && mvn clean test )    # 33/33 pass
-```
+**Per-student requirement:** Each student must show their **second service** implemented, OR their **integration/resilience component** implemented and usable. Tests and documentation are **not** required for this second responsibility — only points A, B, and D from Checkpoint 1 apply (Running Service, API Implementation, Persistence).
 
-Each service ships with an `application.properties` (default profile)
-and an `application-docker.properties` (container hostname overrides),
-plus Flyway migrations under `src/main/resources/db/migration/`.
-A team-shared Docker Compose stack does not live in this branch --
-add the two services to whatever compose file lives on `develop`
-(or the group's integration branch) once this branch is merged.
+### Deliverables (per student)
 
-## For the team lead (merging `sten` -> `develop`)
+- [ ] **A. Second Responsibility — 4 pts:** second service OR integration/resilience component runs
+    - [ ] Running Service: service starts and endpoints are accessible
+    - [ ] API Implementation: all endpoints from Assignment 3 implemented
+    - [ ] Persistence: database connected; data stored and retrieved (services only)
+    - [ ] Layered structure respected: Controller → DTO → Service → Repository → Domain
+    - [ ] ~5–8 REST endpoints exposed (services only)
+- [ ] **B. Basic Integration — 2 pts:** at least one working interaction between two implemented services demonstrated via a **real call** (not mocked)
+- [ ] **C. Initial Frontend — 2 pts:** frontend exists, calls at least one backend endpoint per student, and displays real data
 
-This branch was started from a personal repository whose history does
-not share an ancestor with `develop`. When merging, you will need to
-allow unrelated histories:
+### Grading summary
 
-```bash
-git fetch origin
-git checkout develop
-git merge --allow-unrelated-histories origin/sten
-```
+| # | Criterion                       | Points |
+|---|---------------------------------|--------|
+| A | Second service/component runs   | 4      |
+| B | Basic integration (real call)   | 2      |
+| C | Initial frontend                | 2      |
+|   | **Total**                       | **8**  |
 
-(GitHub's web "Create a merge commit" flow handles this automatically
-in the PR review screen.)
+### Demonstration
 
-Two files will conflict:
+- [ ] API demo of already implemented endpoints via Postman or the frontend (no Swagger required for the second responsibility)
 
-- **`.gitignore`** -- `sten`'s version is a strict superset of
-  `develop`'s. It adds `.idea/` (covers the four `.idea/*` entries
-  on `develop`), `.claude/`, `*.iml`, `target/`, `.env.local` (and
-  recursive variant), and `HELP.md`. Recommended resolution: keep
-  `sten`'s version.
-- **`README.md`** -- this file. After merge, you will likely want a
-  unified group-wide README rather than this Sierra-Lima-only
-  handover doc. Replace or merge at your discretion.
+## To course instructors: How to quickly verify that code repository meets grading rubrics for Checkpoint 2
 
-The two service directories themselves (`menu-service/` and
-`restaurant-service/`) sit at paths that do not exist on `develop`,
-so they will land cleanly without conflict alongside `order-service/`
-and `user-service/` from the `anup` merge.
 
-## Conventions in this slice
-
-- Java 17, Spring Boot, Maven.
-- Java package root: `ee.ut.esi.quickbite.<service>`.
-- One PostgreSQL database per service (no shared DB).
-- JWT auth (issuer-pinned HS256), bearer token in `Authorization`.
-- Flyway migrations, append-only.
-- Errors flow through a per-service `GlobalExceptionHandler` with a
-  shared error-envelope shape.
-- Cross-service references are by UUID; no cross-service foreign
-  keys.
-
-## Owner
-
-Sierra-Lima (Sten-Qy-Li, MSc Computer Science, University of Tartu,
-Group 7).
-
-Source of this branch: commit
-[`44fffd3`](https://github.com/Sten-Qy-Li/2026-esi-quickbite-personal/commit/44fffd3)
-of `https://github.com/Sten-Qy-Li/2026-esi-quickbite-personal`,
-restructured to mirror the layout of the `anup` branch (services at
-the repository root). The full design history (decisions, audits,
-gap analyses, chat archives) lives in the personal repository under
-`dev-docs/` and is intentionally not part of this branch.
