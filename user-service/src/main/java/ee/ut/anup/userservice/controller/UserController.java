@@ -2,6 +2,7 @@ package ee.ut.anup.userservice.controller;
 
 import ee.ut.anup.userservice.dto.AddressDTO;
 import ee.ut.anup.userservice.dto.ErrorResponseDTO;
+import ee.ut.anup.userservice.dto.UpdateUserDTO;
 import ee.ut.anup.userservice.dto.UserDTO;
 import ee.ut.anup.userservice.service.UserService;
 import io.swagger.v3.oas.annotations.Operation;
@@ -100,7 +101,7 @@ public class UserController {
         content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @PutMapping("/{id}")
-  public UserDTO updateUserProfile(@PathVariable Long id, @Valid @RequestBody UserDTO userDTO) {
+  public UserDTO updateUserProfile(@PathVariable Long id, @Valid @RequestBody UpdateUserDTO userDTO) {
     return userService.updateUserProfile(id, userDTO);
   }
 

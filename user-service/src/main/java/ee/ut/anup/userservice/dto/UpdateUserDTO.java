@@ -4,7 +4,9 @@ import ee.ut.anup.userservice.entity.User;
 import jakarta.validation.constraints.Email;
 import jakarta.validation.constraints.NotBlank;
 
-public record UserDTO(
+public record UpdateUserDTO(
+
+        Long userId,
         @NotBlank(message = "Email is required")
         @Email(message = "Invalid email format")
         String email,

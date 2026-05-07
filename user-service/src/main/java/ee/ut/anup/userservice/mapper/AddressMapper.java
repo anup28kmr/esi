@@ -9,7 +9,6 @@ public class AddressMapper {
 
     public AddressDTO toDto(Address address) {
         return new AddressDTO(
-                address.getAddressId(),
                 address.getStreet(),
                 address.getCity(),
                 address.getPostalCode(),

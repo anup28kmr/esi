@@ -13,7 +13,7 @@ RUN ./mvnw dependency:go-offline -B
 COPY src src
 RUN ./mvnw package -DskipTests
 
-# ================== DEVELOPMENT STAGE ==================
+# ================== RUNTIME STAGE ==================
 FROM eclipse-temurin:21-jre-jammy
 
 WORKDIR /app

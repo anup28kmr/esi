@@ -4,6 +4,7 @@ import ee.ut.anup.userservice.dto.AddressDTO;
 import ee.ut.anup.userservice.dto.DriverProfileDTO;
 import ee.ut.anup.userservice.dto.LoginRequestDTO;
 import ee.ut.anup.userservice.dto.LoginResponseDTO;
+import ee.ut.anup.userservice.dto.UpdateUserDTO;
 import ee.ut.anup.userservice.dto.UserDTO;
 import ee.ut.anup.userservice.entity.Address;
 import ee.ut.anup.userservice.entity.DriverProfile;
@@ -83,7 +84,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
-  public UserDTO updateUserProfile(Long userId, UserDTO userDTO) {
+  public UserDTO updateUserProfile(Long userId, UpdateUserDTO userDTO) {
     User user =
         userRepository
             .findById(userId)
@@ -93,7 +94,7 @@ public class UserServiceImpl implements UserService {
 
     return userMapper.toDto(userRepository.save(user));
   }
-
+  
   @Override
   public List<AddressDTO> getUserAddresses(Long userId) {
     return addressRepository.findByUserUserId(userId).stream()

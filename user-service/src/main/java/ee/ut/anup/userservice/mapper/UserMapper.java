@@ -1,5 +1,6 @@
 package ee.ut.anup.userservice.mapper;
 
+import ee.ut.anup.userservice.dto.UpdateUserDTO;
 import ee.ut.anup.userservice.dto.UserDTO;
 import ee.ut.anup.userservice.entity.User;
 import lombok.RequiredArgsConstructor;
@@ -13,7 +14,6 @@ public class UserMapper {
 
   public UserDTO toDto(User user) {
     return new UserDTO(
-        user.getUserId(),
         user.getEmail(),
         user.getPasswordHash(),
         user.getFullName(),
@@ -48,7 +48,7 @@ public class UserMapper {
     return user;
   }
 
-  public void applyProfileUpdate(UserDTO userDTO, User user) {
+  public void applyProfileUpdate(UpdateUserDTO userDTO, User user) {
     user.setFullName(userDTO.fullName());
     user.setPhoneNumber(userDTO.phoneNumber());
   }

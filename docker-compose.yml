@@ -3,11 +3,9 @@ services:
     image: postgres:15-alpine
     container_name: postgres-order
     environment:
-      POSTGRES_DB: order-service
+      POSTGRES_DB: order_service
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-    volumes:
-      - ./db/init/01-create-databases-order.sql:/docker-entrypoint-initdb.d/01-create-databases-order.sql:ro
     ports:
       - "5432:5432"
     healthcheck:
@@ -23,8 +21,6 @@ services:
       POSTGRES_DB: user_service
       POSTGRES_USER: postgres
       POSTGRES_PASSWORD: password
-    volumes:
-      - ./db/init/01-create-databases-user.sql:/docker-entrypoint-initdb.d/01-create-databases-user.sql:ro
     ports:
       - "5433:5432"
     healthcheck:
@@ -42,7 +38,7 @@ services:
       - "7001:7001"
     environment:
       DB_HOST: postgres-order
-      DB_NAME: order-service
+      DB_NAME: order_service
       DB_USERNAME: postgres
       DB_PASSWORD: password
     depends_on:
@@ -61,11 +57,22 @@ services:
       DB_NAME: user_service
       DB_USERNAME: postgres
       DB_PASSWORD: password
-      SPRING_PROFILES_ACTIVE: docker
-    volumes:
-      - ./user-service/src:/app/src          # Mount only source code
-      - ./user-service/pom.xml:/app/pom.xml  # Optional: for dependency changes
-      # Do NOT mount the whole /app
     depends_on:
       postgres-user:
         condition: service_healthy
+
+  api-gateway:
+    build:
+      context: ./api-gateway
+      dockerfile: Dockerfile
+    container_name: api-gateway
+    ports:
+      - "9090:9090"
+    environment:
+      USER_SERVICE_HOST: user-service
+      USER_SERVICE_PORT: 7000
+      ORDER_SERVICE_HOST: order-service
+      ORDER_SERVICE_PORT: 7001
+    depends_on:
+      - user-service
+      - order-service
