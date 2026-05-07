@@ -1,0 +1,135 @@
+# Brings menu-service + restaurant-service up with their PostgreSQL DBs
+# for the Checkpoint 2 demo (Items A and B). Run from repo root:
+#
+#   docker compose up --build
+#
+# Then:
+#   - http://localhost:8081/swagger-ui.html  (restaurant-service)
+#   - http://localhost:8082/swagger-ui.html  (menu-service)
+#
+# Item B is demonstrated by hitting a write endpoint on menu-service
+# (POST/PUT/DELETE under /restaurants/{rid}/menu-items or /menu-items/*),
+# which triggers RestaurantOwnershipClient to call restaurant-service
+# at http://restaurant-service:8081/restaurants/{rid} -- a real HTTP
+# hop on the quickbite-net bridge, not a mock.
+
+name: quickbite
+
+services:
+  restaurant-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: restaurant_db
+      POSTGRES_USER: restaurant_user
+      POSTGRES_PASSWORD: restaurant_pw
+    ports:
+      - "5432:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U restaurant_user -d restaurant_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [quickbite-net]
+
+  menu-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: menu_db
+      POSTGRES_USER: menu_user
+      POSTGRES_PASSWORD: menu_pw
+    ports:
+      - "5433:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U menu_user -d menu_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [quickbite-net]
+
+  restaurant-service:
+    build: ./restaurant-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8081:8081"
+    depends_on:
+      restaurant-db:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8081/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks: [quickbite-net]
+
+  menu-service:
+    build: ./menu-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8082:8082"
+    depends_on:
+      menu-db:
+        condition: service_healthy
+      restaurant-service:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8082/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks: [quickbite-net]
+
+  gateway:
+    image: nginx:1.27-alpine
+    ports:
+      - "8080:80"
+    volumes:
+      - ./gateway/nginx.conf:/etc/nginx/nginx.conf:ro
+    depends_on:
+      restaurant-service:
+        condition: service_healthy
+      menu-service:
+        condition: service_healthy
+    healthcheck:
+      # 127.0.0.1 not localhost: busybox wget resolves localhost to
+      # ::1, but the nginx config above listens IPv4 only.
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/healthz"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks: [quickbite-net]
+
+  frontend:
+    build:
+      context: ./frontend
+      args:
+        # Baked into the Vue bundle by client.js. Browser-reachable
+        # URL of the gateway (host-mapped 8080). Cross-origin to the
+        # gateway, which has CORS configured -- avoids the /api/
+        # prefix complications that the original same-origin design
+        # would have required in client.js.
+        VUE_APP_API_BASE_URL: http://localhost:8080
+    ports:
+      - "8090:80"
+    environment:
+      # Used by the frontend's own nginx /api/** fallback proxy.
+      # Not exercised by the Option-X cross-origin flow above, but
+      # set correctly so a future same-origin switch works without
+      # changing this compose entry.
+      GATEWAY_UPSTREAM: http://gateway
+    depends_on:
+      gateway:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "wget", "-qO-", "http://127.0.0.1/"]
+      interval: 10s
+      timeout: 3s
+      retries: 6
+    networks: [quickbite-net]
+
+networks:
+  quickbite-net:
+    driver: bridge
