@@ -14,8 +14,9 @@ public class UserMapper {
 
   public UserDTO toDto(User user) {
     return new UserDTO(
+        user.getUserId(),
         user.getEmail(),
-        user.getPassword(),
+        null,
         user.getFullName(),
         user.getPhoneNumber(),
         user.getRole(),
@@ -25,7 +26,7 @@ public class UserMapper {
                 user.getAddresses().stream()
                     .filter(ee.ut.anup.userservice.entity.Address::isDefault)
                     .findFirst()
-                    .orElse(user.getAddresses().get(0)))
+                    .orElse(user.getAddresses().getFirst()))
             : null);
   }
 

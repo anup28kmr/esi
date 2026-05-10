@@ -89,9 +89,11 @@ class UserControllerTest {
     @Test
     void registerUser_shouldReturnCreatedUser() throws Exception {
         UserDTO request = new UserDTO(
+                null,
                 "john@example.com", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, null, null);
         UserDTO response = new UserDTO(
+                1L,
                 "john@example.com", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, User.Status.ACTIVE, null);
         when(userService.registerUser(eq(request))).thenReturn(response);
@@ -111,6 +113,7 @@ class UserControllerTest {
     @Test
     void registerUser_shouldReturnBadRequest_whenEmailMissing() throws Exception {
         UserDTO invalidRequest = new UserDTO(
+                null,
                 "", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, null, null);
 
@@ -124,6 +127,7 @@ class UserControllerTest {
     @Test
     void registerUser_shouldReturnBadRequest_whenEmailInvalid() throws Exception {
         UserDTO invalidRequest = new UserDTO(
+                null,
                 "not-an-email", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, null, null);
 
@@ -137,6 +141,7 @@ class UserControllerTest {
     @Test
     void registerUser_shouldReturnBadRequest_whenPasswordMissing() throws Exception {
         UserDTO invalidRequest = new UserDTO(
+                null,
                 "john@example.com", "", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, null, null);
 
@@ -150,6 +155,7 @@ class UserControllerTest {
     @Test
     void registerUser_shouldReturnBadRequest_whenEmailAlreadyExists() throws Exception {
         UserDTO request = new UserDTO(
+                null,
                 "john@example.com", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, null, null);
         when(userService.registerUser(eq(request)))
@@ -167,6 +173,7 @@ class UserControllerTest {
     @Test
     void getUserProfile_shouldReturnUser() throws Exception {
         UserDTO response = new UserDTO(
+                11L,
                 "amy@example.com", "pwd", "Amy", "+372111111",
                 User.Role.DRIVER, User.Status.ACTIVE, null);
         when(userService.getUserProfile(11L)).thenReturn(response);
@@ -197,6 +204,7 @@ class UserControllerTest {
                 8L, "mia@example.com", "newpass", "Mia Updated", "+372222222",
                 User.Role.CUSTOMER, null, null);
         UserDTO response = new UserDTO(
+                8L,
                 "mia@example.com", "newpass", "Mia Updated", "+372222222",
                 User.Role.CUSTOMER, User.Status.ACTIVE, null);
         when(userService.updateUserProfile(8L, request)).thenReturn(response);

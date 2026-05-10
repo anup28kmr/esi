@@ -1,5 +1,6 @@
 package ee.ut.anup.userservice.entity;
 
+import com.fasterxml.jackson.annotation.JsonCreator;
 import jakarta.persistence.*;
 import lombok.Getter;
 import lombok.Setter;
@@ -48,7 +49,31 @@ public class User {
     }
 
     public enum Role {
-        CUSTOMER, DRIVER, RESTAURANT_OWNER, ADMIN
+        CUSTOMER, DRIVER, RESTAURANT_OWNER, ADMIN;
+
+        @JsonCreator
+        public static Role fromValue(String value) {
+            if (value == null || value.isBlank()) {
+                return null;
+            }
+
+            String normalized = value.trim()
+                .replace(' ', '_')
+                .replace('-', '_')
+                .toUpperCase();
+
+            if ("RESTAURANTOWNER".equals(normalized)) {
+                return RESTAURANT_OWNER;
+            }
+
+            return switch (normalized) {
+                case "CUSTOMER" -> CUSTOMER;
+                case "DRIVER" -> DRIVER;
+                case "RESTAURANT_OWNER" -> RESTAURANT_OWNER;
+                case "ADMIN" -> ADMIN;
+                default -> throw new IllegalArgumentException("Unknown role: " + value);
+            };
+        }
     }
 
     public enum Status {

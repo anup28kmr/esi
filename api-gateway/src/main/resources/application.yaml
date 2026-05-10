@@ -3,12 +3,45 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      globalcors:
+        cors-configurations:
+          '[/**]':
+            allowed-origins: "http://localhost:8090"
+            allowed-methods:
+              - GET
+              - POST
+              - PUT
+              - PATCH
+              - DELETE
+              - OPTIONS
+            allowed-headers: "*"
+            allow-credentials: true
+            max-age: 3600
       routes:
         # User service - /api/auth/** (frontend calls /api/auth/login)
+        - id: user-service-api-auth-root
+          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
+          predicates:
+            - Path=/api/auth
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
         - id: user-service-api-auth
           uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
           predicates:
             - Path=/api/auth/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+        # User service - /api/users/** (frontend signup/login)
+        - id: user-service-api-users-root
+          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
+          predicates:
+            - Path=/api/users
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+        - id: user-service-api-users
+          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
+          predicates:
+            - Path=/api/users/**
           filters:
             - RewritePath=/api(?<segment>.*), $\{segment}
         # User service - /auth/** (direct service calls)
@@ -35,8 +68,27 @@ spring:
           uri: http://${MENU_SERVICE_HOST:menu-service}:${MENU_SERVICE_PORT:8082}
           predicates:
             - Path=/menu-items/**
+        # Payment service
+        - id: payment-service
+          uri: http://${PAYMENT_SERVICE_HOST:payment-service}:${PAYMENT_SERVICE_PORT:8085}
+          predicates:
+            - Path=/payments/**
+        # Delivery service
+        - id: delivery-service
+          uri: http://${DELIVERY_SERVICE_HOST:delivery-service}:${DELIVERY_SERVICE_PORT:8086}
+          predicates:
+            - Path=/deliveries/**
+        # Notification service
+        - id: notification-service
+          uri: http://${NOTIFICATION_SERVICE_HOST:notification-service}:${NOTIFICATION_SERVICE_PORT:8087}
+          predicates:
+            - Path=/notifications/**
 
 logging:
   level:
     org.springframework.cloud.gateway: INFO
+    org.springframework.web: INFO
+    org.springframework.web.servlet.mvc: DEBUG
     reactor.netty.http.client: INFO
+    ee.ut.quickbite.apigateway: DEBUG
+    ee.ut.quickbite.apigateway.config: DEBUG

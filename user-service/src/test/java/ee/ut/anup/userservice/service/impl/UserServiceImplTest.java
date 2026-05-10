@@ -1,10 +1,10 @@
 package ee.ut.anup.userservice.service.impl;
 
-import static org.junit.jupiter.api.Assertions.*;
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.Mockito.*;
 
 import ee.ut.anup.userservice.dto.AddressDTO;
+import ee.ut.anup.userservice.dto.UpdateUserDTO;
 import ee.ut.anup.userservice.dto.UserDTO;
 import ee.ut.anup.userservice.entity.Address;
 import ee.ut.anup.userservice.entity.User;
@@ -23,6 +23,7 @@ import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
 import org.springframework.security.crypto.password.PasswordEncoder;
+
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -65,6 +66,7 @@ class UserServiceImplTest {
         // Given
         AddressDTO addressDto = new AddressDTO("Main St", "City", "12345", "Home", true);
         UserDTO userDto = new UserDTO(
+                null,
                 "test@example.com",
                 "password",
                 "Test User",
@@ -90,8 +92,73 @@ class UserServiceImplTest {
         // Then
         verify(userRepository).save(argThat(user -> 
             user.getAddresses().size() == 1 &&
-            user.getAddresses().get(0).getStreet().equals("Main St") &&
-            user.getAddresses().get(0).getUser() == user
+            user.getAddresses().getFirst().getStreet().equals("Main St") &&
+            user.getAddresses().getFirst().getUser() == user
+        ));
+    }
+
+    @Test
+    void updateUserProfile_shouldEncodePassword_whenNewPasswordProvided() {
+        User existingUser = new User();
+        existingUser.setUserId(7L);
+        existingUser.setEmail("test@example.com");
+        existingUser.setPassword("old-hash");
+        existingUser.setFullName("Test User");
+        existingUser.setPhoneNumber("12345678");
+
+        UpdateUserDTO request = new UpdateUserDTO(
+                7L,
+                "test@example.com",
+                "new-secret",
+                "Updated User",
+                "87654321",
+                User.Role.CUSTOMER,
+                User.Status.ACTIVE,
+                null
+        );
+
+        when(userRepository.findById(7L)).thenReturn(Optional.of(existingUser));
+        when(passwordEncoder.encode("new-secret")).thenReturn("encoded-secret");
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.updateUserProfile(7L, request);
+
+        verify(passwordEncoder).encode("new-secret");
+        verify(userRepository).save(argThat(user ->
+                "encoded-secret".equals(user.getPassword()) &&
+                "Updated User".equals(user.getFullName()) &&
+                "87654321".equals(user.getPhoneNumber())
+        ));
+    }
+
+    @Test
+    void updateUserProfile_shouldKeepPassword_whenBlankPasswordProvided() {
+        User existingUser = new User();
+        existingUser.setUserId(8L);
+        existingUser.setEmail("test@example.com");
+        existingUser.setPassword("old-hash");
+
+        UpdateUserDTO request = new UpdateUserDTO(
+                8L,
+                "test@example.com",
+                "",
+                "Updated User",
+                "87654321",
+                User.Role.CUSTOMER,
+                User.Status.ACTIVE,
+                null
+        );
+
+        when(userRepository.findById(8L)).thenReturn(Optional.of(existingUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
+
+        userService.updateUserProfile(8L, request);
+
+        verify(passwordEncoder, never()).encode(anyString());
+        verify(userRepository).save(argThat(user ->
+                "old-hash".equals(user.getPassword()) &&
+                "Updated User".equals(user.getFullName()) &&
+                "87654321".equals(user.getPhoneNumber())
         ));
     }
 }

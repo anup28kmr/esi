@@ -134,6 +134,9 @@ public class UserServiceImpl implements UserService {
                 });
 
     userMapper.applyProfileUpdate(userDTO, user);
+    if (userDTO.password() != null && !userDTO.password().isBlank()) {
+      user.setPassword(passwordEncoder.encode(userDTO.password()));
+    }
     User savedUser = userRepository.save(user);
     log.info("User profile updated, userId={}", userId);
     return userMapper.toDto(savedUser);
