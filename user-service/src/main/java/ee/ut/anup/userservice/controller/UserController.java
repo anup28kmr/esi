@@ -14,6 +14,7 @@ import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
@@ -24,6 +25,7 @@ import java.util.List;
 @RestController
 @RequestMapping("/users")
 @RequiredArgsConstructor
+@Slf4j
 @Tag(name = "User Management", description = "Endpoints for managing users and their addresses")
 public class UserController {
 
@@ -36,11 +38,13 @@ public class UserController {
   @GetMapping("/dummy-restaurants")
   public ResponseEntity<Object> getDummyRestaurants() {
     String restaurantServiceUrl = "http://restaurant-service/restaurants";
+    log.info("Dummy restaurants call started, target={}", restaurantServiceUrl);
     try {
-      // This is a dummy call to a service that doesn't exist yet
       Object restaurants = restTemplate.getForObject(restaurantServiceUrl, Object.class);
+      log.info("Dummy restaurants call succeeded");
       return ResponseEntity.ok(restaurants);
     } catch (Exception e) {
+      log.warn("Dummy restaurants call failed: {}", e.getMessage());
       return ResponseEntity.status(HttpStatus.SERVICE_UNAVAILABLE)
           .body("Restaurant service is currently unavailable (Dummy call)");
     }
@@ -62,7 +66,10 @@ public class UserController {
   @PostMapping
   @ResponseStatus(HttpStatus.CREATED)
   public UserDTO registerUser(@Valid @RequestBody UserDTO userDTO) {
-    return userService.registerUser(userDTO);
+    log.info("Register user request received, email={}", userDTO.email());
+    UserDTO createdUser = userService.registerUser(userDTO);
+    log.info("Register user completed, email={}, role={}", createdUser.email(), createdUser.role());
+    return createdUser;
   }
 
   @Operation(
@@ -80,7 +87,10 @@ public class UserController {
   })
   @GetMapping("/{id}")
   public UserDTO getUserProfile(@PathVariable Long id) {
-    return userService.getUserProfile(id);
+    log.info("Get user profile request received, userId={}", id);
+    UserDTO user = userService.getUserProfile(id);
+    log.info("Get user profile completed, userId={}", id);
+    return user;
   }
 
   @Operation(
@@ -102,7 +112,10 @@ public class UserController {
   })
   @PutMapping("/{id}")
   public UserDTO updateUserProfile(@PathVariable Long id, @Valid @RequestBody UpdateUserDTO userDTO) {
-    return userService.updateUserProfile(id, userDTO);
+    log.info("Update user profile request received, userId={}", id);
+    UserDTO updatedUser = userService.updateUserProfile(id, userDTO);
+    log.info("Update user profile completed, userId={}", id);
+    return updatedUser;
   }
 
   @Operation(
@@ -121,7 +134,10 @@ public class UserController {
   })
   @GetMapping("/{id}/addresses")
   public List<AddressDTO> getUserAddresses(@PathVariable Long id) {
-    return userService.getUserAddresses(id);
+    log.info("Get user addresses request received, userId={}", id);
+    List<AddressDTO> addresses = userService.getUserAddresses(id);
+    log.info("Get user addresses completed, userId={}, count={}", id, addresses.size());
+    return addresses;
   }
 
   @Operation(
@@ -145,6 +161,9 @@ public class UserController {
   @ResponseStatus(HttpStatus.CREATED)
   public AddressDTO addUserAddress(
       @PathVariable Long id, @Valid @RequestBody AddressDTO addressDTO) {
-    return userService.addUserAddress(id, addressDTO);
+    log.info("Add user address request received, userId={}", id);
+    AddressDTO savedAddress = userService.addUserAddress(id, addressDTO);
+    log.info("Add user address completed, userId={}", id);
+    return savedAddress;
   }
 }

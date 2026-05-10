@@ -1,12 +1,13 @@
 package ee.ut.anup.userservice.exception;
 
-
 import ee.ut.anup.userservice.dto.ErrorResponseDTO;
 
 import java.time.LocalDateTime;
 import java.util.HashMap;
 import java.util.List;
 import java.util.Map;
+import lombok.extern.slf4j.Slf4j;
+import org.jspecify.annotations.NonNull;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -20,11 +21,18 @@ import org.springframework.web.context.request.WebRequest;
 import org.springframework.web.servlet.mvc.method.annotation.ResponseEntityExceptionHandler;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
 
     @Override
-    protected ResponseEntity<Object> handleMethodArgumentNotValid(
-            MethodArgumentNotValidException ex, HttpHeaders headers, HttpStatusCode status, WebRequest request) {
+    protected @NonNull ResponseEntity<Object> handleMethodArgumentNotValid(
+            @NonNull MethodArgumentNotValidException ex,
+            @NonNull HttpHeaders headers,
+            @NonNull HttpStatusCode status,
+            @NonNull WebRequest request) {
+        String path = request.getDescription(false).replace("uri=", "");
+        log.warn("Validation failed for request path={}", path);
+
         Map<String, String> validationErrors = new HashMap<>();
         List<ObjectError> validationErrorList = ex.getBindingResult().getAllErrors();
 
@@ -39,12 +47,15 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDTO> handleResourceNotFoundException(ResourceNotFoundException exception,
                                                                             WebRequest webRequest) {
-    ErrorResponseDTO errorResponseDTO =
-        new ErrorResponseDTO(
-            webRequest.getDescription(false),
-            HttpStatus.NOT_FOUND,
-            exception.getMessage(),
-            LocalDateTime.now());
+        String path = webRequest.getDescription(false).replace("uri=", "");
+        log.warn("Resource not found at path={}, message={}", path, exception.getMessage());
+
+        ErrorResponseDTO errorResponseDTO =
+            new ErrorResponseDTO(
+                path,
+                HttpStatus.NOT_FOUND,
+                exception.getMessage(),
+                LocalDateTime.now());
         return new ResponseEntity<>(errorResponseDTO, HttpStatus.NOT_FOUND);
     }
 
@@ -52,6 +63,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleInvalidCredentials(InvalidCredentialsException exception,
                                                                       WebRequest webRequest) {
         String path = webRequest.getDescription(false).replace("uri=", "");
+        log.warn("Invalid credentials at path={}", path);
+
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 path,
                 HttpStatus.UNAUTHORIZED,
@@ -65,6 +78,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleCustomerAlreadyExistsException(UserAlreadyExistsException exception,
                                                                                   WebRequest webRequest){
         String path = webRequest.getDescription(false).replace("uri=", "");
+        log.warn("Duplicate user registration attempt at path={}, message={}", path, exception.getMessage());
+
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 path,
                 HttpStatus.BAD_REQUEST,
@@ -78,6 +93,8 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
     public ResponseEntity<ErrorResponseDTO> handleGlobalException(Exception exception,
                                                                   WebRequest webRequest) {
         String path = webRequest.getDescription(false).replace("uri=", "");
+        log.error("Unhandled exception at path={}", path, exception);
+
         ErrorResponseDTO errorResponse = new ErrorResponseDTO(
                 path,
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -86,5 +103,4 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.INTERNAL_SERVER_ERROR);
     }
-
 }

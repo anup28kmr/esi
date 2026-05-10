@@ -3,7 +3,7 @@ CREATE TABLE IF NOT EXISTS users (
     created_at TIMESTAMP(6),
     email VARCHAR(255) NOT NULL,
     full_name VARCHAR(255),
-    password_hash VARCHAR(255) NOT NULL,
+    password VARCHAR(255) NOT NULL,
     phone_number VARCHAR(255),
     role VARCHAR(255),
     status VARCHAR(255)

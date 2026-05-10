@@ -15,7 +15,7 @@ public class UserMapper {
   public UserDTO toDto(User user) {
     return new UserDTO(
         user.getEmail(),
-        user.getPasswordHash(),
+        user.getPassword(),
         user.getFullName(),
         user.getPhoneNumber(),
         user.getRole(),
@@ -32,7 +32,7 @@ public class UserMapper {
   public User toEntity(UserDTO userDTO) {
     User user = new User();
     user.setEmail(userDTO.email());
-    user.setPasswordHash(userDTO.password());
+    user.setPassword(userDTO.password());
     user.setFullName(userDTO.fullName());
     user.setPhoneNumber(userDTO.phoneNumber());
     user.setRole(userDTO.role());

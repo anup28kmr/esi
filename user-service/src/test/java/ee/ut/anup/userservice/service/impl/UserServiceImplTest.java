@@ -15,11 +15,14 @@ import ee.ut.anup.userservice.repository.AddressRepository;
 import ee.ut.anup.userservice.repository.DriverProfileRepository;
 import ee.ut.anup.userservice.repository.UserRepository;
 import java.util.Optional;
+
+import ee.ut.anup.userservice.service.AuthService;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.mockito.Mock;
 import org.mockito.junit.jupiter.MockitoExtension;
+import org.springframework.security.crypto.password.PasswordEncoder;
 
 @ExtendWith(MockitoExtension.class)
 class UserServiceImplTest {
@@ -34,6 +37,10 @@ class UserServiceImplTest {
     private AddressMapper addressMapper;
     @Mock
     private DriverProfileMapper driverProfileMapper;
+    @Mock
+    private PasswordEncoder passwordEncoder;
+    @Mock
+    private AuthService authService;
 
     private UserMapper userMapper;
     private UserServiceImpl userService;
@@ -47,7 +54,9 @@ class UserServiceImplTest {
                 driverProfileRepository,
                 userMapper,
                 addressMapper,
-                driverProfileMapper
+                driverProfileMapper,
+                passwordEncoder,
+                authService
         );
     }
 

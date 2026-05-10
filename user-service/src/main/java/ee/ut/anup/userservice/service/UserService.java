@@ -5,8 +5,9 @@ import java.util.List;
 
 public interface UserService {
     UserDTO registerUser(UserDTO userDTO);
-    LoginResponseDTO login(LoginRequestDTO loginRequestDTO);
+    LoginResponseDTO login(AuthRequest authRequest);
     UserDTO getUserProfile(Long userId);
+    UserDTO getUserByEmail(String email);
     UserDTO updateUserProfile(Long userId, UpdateUserDTO userDTO);
     List<AddressDTO> getUserAddresses(Long userId);
     AddressDTO addUserAddress(Long userId, AddressDTO addressDTO);

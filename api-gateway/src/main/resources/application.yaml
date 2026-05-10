@@ -1,0 +1,42 @@
+spring:
+  application:
+    name: api-gateway
+  cloud:
+    gateway:
+      routes:
+        # User service - /api/auth/** (frontend calls /api/auth/login)
+        - id: user-service-api-auth
+          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
+          predicates:
+            - Path=/api/auth/**
+          filters:
+            - RewritePath=/api(?<segment>.*), $\{segment}
+        # User service - /auth/** (direct service calls)
+        - id: user-service-auth
+          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
+          predicates:
+            - Path=/auth/**
+        - id: user-service-users
+          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
+          predicates:
+            - Path=/users/**
+        # Order service
+        - id: order-service
+          uri: http://${ORDER_SERVICE_HOST:order-service}:${ORDER_SERVICE_PORT:7001}
+          predicates:
+            - Path=/orders/**
+        # Restaurant service
+        - id: restaurant-service
+          uri: http://${RESTAURANT_SERVICE_HOST:restaurant-service}:${RESTAURANT_SERVICE_PORT:8081}
+          predicates:
+            - Path=/restaurants/**
+        # Menu service
+        - id: menu-service
+          uri: http://${MENU_SERVICE_HOST:menu-service}:${MENU_SERVICE_PORT:8082}
+          predicates:
+            - Path=/menu-items/**
+
+logging:
+  level:
+    org.springframework.cloud.gateway: INFO
+    reactor.netty.http.client: INFO
