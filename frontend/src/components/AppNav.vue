@@ -8,6 +8,7 @@
       <li><router-link to="/restaurants">Restaurants</router-link></li>
       <li v-if="authed"><router-link to="/cart">Cart</router-link></li>
       <li v-if="authed"><router-link to="/orders">Orders</router-link></li>
+      <li><router-link to="/notifications">Notifications</router-link></li>
     </ul>
     <div class="auth">
       <template v-if="authed">

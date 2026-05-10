@@ -1,0 +1,7 @@
+spring:
+  datasource:
+    url: jdbc:postgresql://notification-db:5432/notification_db
+    username: notification
+    password: notification
+  kafka:
+    bootstrap-servers: kafka:9092

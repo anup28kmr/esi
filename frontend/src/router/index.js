@@ -12,6 +12,7 @@ import AddMenuItemView from '../views/AddMenuItemView.vue';
 import MenuItemDetailView from '../views/MenuItemDetailView.vue';
 import CartView from '../views/CartView.vue';
 import OrderStatusView from '../views/OrderStatusView.vue';
+import NotificationsView from '../views/NotificationsView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 
 /**
@@ -70,6 +71,11 @@ const routes = [
     component: OrderStatusView,
     props: true,
     meta: { requiresAuth: true }
+  },
+  {
+    path: '/notifications',
+    name: 'notifications',
+    component: NotificationsView
   },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
 ];

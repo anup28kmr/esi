@@ -1,3 +1,28 @@
 spring:
   application:
     name: delivery-service
+  datasource:
+    url: jdbc:postgresql://localhost:5435/delivery_db
+    username: delivery_user
+    password: delivery_pw
+    driver-class-name: org.postgresql.Driver
+  jpa:
+    hibernate:
+      ddl-auto: update
+    show-sql: false
+    properties:
+      hibernate:
+        dialect: org.hibernate.dialect.PostgreSQLDialect
+
+server:
+  port: 8086
+
+services:
+  payment:
+    url: http://localhost:8085
+
+springdoc:
+  api-docs:
+    path: /api-docs
+  swagger-ui:
+    path: /swagger-ui.html
