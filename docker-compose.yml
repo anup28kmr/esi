@@ -204,30 +204,33 @@ services:
 
   # === Mike-Alfa (notification-service + Kafka event broker) ===
 
+  # Kafka-compatible event broker. We use Redpanda (Go binary, Kafka
+  # protocol over the wire) instead of Apache Kafka because the JVM
+  # JIT compiler crashes under qemu user-mode emulation on Apple
+  # Silicon Colima. Spring Kafka, kafka-topics.sh, etc. all talk to
+  # this broker transparently. Replace with apache/kafka in any
+  # environment that has native x86_64 hardware available.
   kafka:
-    image: apache/kafka:3.8.0
+    image: redpandadata/redpanda:v24.2.4
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://kafka:9092
     ports:
       - "${KAFKA_HOST_PORT:-9092}:9092"
-    environment:
-      KAFKA_NODE_ID: "1"
-      KAFKA_PROCESS_ROLES: "broker,controller"
-      KAFKA_LISTENERS: "PLAINTEXT://:9092,CONTROLLER://:9093"
-      KAFKA_ADVERTISED_LISTENERS: "PLAINTEXT://kafka:9092"
-      KAFKA_LISTENER_SECURITY_PROTOCOL_MAP: "CONTROLLER:PLAINTEXT,PLAINTEXT:PLAINTEXT"
-      KAFKA_CONTROLLER_LISTENER_NAMES: "CONTROLLER"
-      KAFKA_CONTROLLER_QUORUM_VOTERS: "1@kafka:9093"
-      KAFKA_INTER_BROKER_LISTENER_NAME: "PLAINTEXT"
-      KAFKA_AUTO_CREATE_TOPICS_ENABLE: "true"
-      KAFKA_OFFSETS_TOPIC_REPLICATION_FACTOR: "1"
-      KAFKA_TRANSACTION_STATE_LOG_REPLICATION_FACTOR: "1"
-      KAFKA_TRANSACTION_STATE_LOG_MIN_ISR: "1"
-      CLUSTER_ID: "MkU3OEVBNTcwNTJENDM2Qk"
     healthcheck:
-      test: ["CMD-SHELL", "/opt/kafka/bin/kafka-broker-api-versions.sh --bootstrap-server kafka:9092 >/dev/null 2>&1"]
+      test: ["CMD-SHELL", "rpk cluster info --brokers kafka:9092 >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
       retries: 18
-      start_period: 30s
+      start_period: 20s
     networks: [quickbite-net]
 
   notification-db:

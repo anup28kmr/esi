@@ -152,7 +152,7 @@ three containers: `kafka` (KRaft, auto-creates topics), `notification-db`
 
 ```bash
 # Inspect topics declared by notification-service via KafkaAdmin
-docker exec -it $(docker-compose ps -q kafka) /opt/kafka/bin/kafka-topics.sh --bootstrap-server kafka:9092 --list
+docker exec quickbite-kafka-1 rpk topic list --brokers kafka:9092
 
 # Notification REST surface (Swagger UI):
 #   http://localhost:8087/swagger-ui.html
