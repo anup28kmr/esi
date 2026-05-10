@@ -70,8 +70,8 @@ export default {
       try {
         const headers = { 'X-User-Id': this.userId };
         const [count, list] = await Promise.all([
-          api.get('/api/notifications/unread-count', { headers }),
-          api.get('/api/notifications', { headers })
+          api.get('/notifications/unread-count', { headers }),
+          api.get('/notifications', { headers })
         ]);
         this.unreadCount = (count && count.unreadCount) || 0;
         this.items = Array.isArray(list) ? list : [];
@@ -87,7 +87,7 @@ export default {
     },
     async markAllRead() {
       try {
-        await api.patch('/api/notifications/read-all', null, {
+        await api.patch('/notifications/read-all', null, {
           headers: { 'X-User-Id': this.userId }
         });
         await this.load();
