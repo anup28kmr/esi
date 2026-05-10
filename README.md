@@ -140,6 +140,61 @@ Open **http://localhost:8090** in a browser:
 
 Open the browser dev-tools Network tab to confirm the calls go to `http://localhost:8080/...` (the gateway) and return live JSON.
 
+### 4b. Mike-Alfa (notification-service + Kafka event broker)
+
+Owner: Melih Arık. Component 1 is the `notification-service` (A3 §3.7);
+Component 2 is the Kafka event broker configuration (A3 §3.9 / §6.2),
+which replaces the design-only Review Service. The compose stack adds
+three containers: `kafka` (KRaft, auto-creates topics), `notification-db`
+(PostgreSQL), and `notification-service` (Spring Boot, port 8087).
+
+**Item A — second component runs (Event Broker + notification persistence).**
+
+```bash
+# Inspect topics declared by notification-service via KafkaAdmin
+docker exec quickbite-kafka-1 rpk topic list --brokers kafka:9092
+
+# Notification REST surface (Swagger UI):
+#   http://localhost:8087/swagger-ui.html
+```
+
+Expected topics: `payment-events`, `delivery-events`, `order-events`,
+`notification-events.DLQ`.
+
+**Item B — real Kafka publish/consume between two services.**
+
+The `notification-service` consumes `payment-events` and turns each event
+into a `Notification` row. `POST /admin/publish-event` produces an event
+to the broker exactly as Ege's `payment-service` will once its publisher
+stub is swapped to a real producer (CP3). Round-trip proof:
+
+```bash
+RECIP="11111111-1111-1111-1111-111111111111"
+
+# 1. Produce a payment.completed event to Kafka (real network call).
+curl -s -X POST http://localhost:8087/admin/publish-event \
+  -H 'Content-Type: application/json' \
+  -d "{\"topic\":\"payment-events\",\"type\":\"payment.completed\",\
+       \"payload\":{\"recipientId\":\"$RECIP\",\"orderId\":\"o-1\",\"message\":\"Payment confirmed\"}}"
+
+# 2. notification-service consumes it asynchronously and persists a row.
+sleep 2
+curl -s "http://localhost:8087/notifications/unread-count" -H "X-User-Id: $RECIP"
+# {"unreadCount":1}
+```
+
+The producer (`AdminController` → `KafkaTemplate`) and the consumer
+(`KafkaEventConsumer.@KafkaListener`) live in different Spring contexts
+within the same image but communicate strictly through the Kafka broker
+container; nothing is mocked.
+
+**Item C — frontend page consumes the notification-service.**
+
+Open **http://localhost:8090/notifications**. The page prompts for a
+user UUID, calls `GET /api/notifications` and `GET /api/notifications/unread-count`
+through the gateway, and renders the live inbox. Use the same UUID you
+just produced an event for to see the round-trip end-to-end in the UI.
+
 ### 5. Tear down
 
 ```bash
