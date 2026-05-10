@@ -51,6 +51,11 @@
 <script>
 import { api, ApiError } from '../api/client.js';
 
+// Direct base URL for local frontend dev when the gateway isn't running.
+// `api.get(...)` passes absolute URLs through `client.js` `buildUrl` unchanged.
+// In production behind the gateway, switch back to relative '/notifications'.
+const NOTIF_BASE = 'http://localhost:8087';
+
 export default {
   name: 'NotificationsView',
   data() {
@@ -70,8 +75,8 @@ export default {
       try {
         const headers = { 'X-User-Id': this.userId };
         const [count, list] = await Promise.all([
-          api.get('/notifications/unread-count', { headers }),
-          api.get('/notifications', { headers })
+          api.get(`${NOTIF_BASE}/notifications/unread-count`, { headers }),
+          api.get(`${NOTIF_BASE}/notifications`, { headers })
         ]);
         this.unreadCount = (count && count.unreadCount) || 0;
         this.items = Array.isArray(list) ? list : [];
@@ -87,7 +92,7 @@ export default {
     },
     async markAllRead() {
       try {
-        await api.patch('/notifications/read-all', null, {
+        await api.patch(`${NOTIF_BASE}/notifications/read-all`, null, {
           headers: { 'X-User-Id': this.userId }
         });
         await this.load();
