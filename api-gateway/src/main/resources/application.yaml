@@ -3,10 +3,12 @@ spring:
     name: api-gateway
   cloud:
     gateway:
+      default-filters:
+        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
       globalcors:
         cors-configurations:
           '[/**]':
-            allowed-origins: "http://localhost:8090"
+            allowed-origins: "*"
             allowed-methods:
               - GET
               - POST
@@ -15,7 +17,6 @@ spring:
               - DELETE
               - OPTIONS
             allowed-headers: "*"
-            allow-credentials: true
             max-age: 3600
       routes:
         # User service - /api/auth/** (frontend calls /api/auth/login)

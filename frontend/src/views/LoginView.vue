@@ -25,7 +25,7 @@
 <script>
 import { RouterLink } from 'vue-router';
 import { api, ApiError } from '../api/client.js';
-import { setCurrentUser, setToken } from '../auth/token.js';
+import { isAuthenticated, setCurrentUser, setToken } from '../auth/token.js';
 
 export default {
   name: 'LoginView',
@@ -53,12 +53,15 @@ export default {
         console.log('[LoginView] Login response:', result);
         const token = result && (result.token || result.accessToken || result.jwt);
         console.log('[LoginView] Token extracted:', token ? 'YES' : 'NO');
+        console.log('[LoginView] User data:', result && result.user);
         if (!token) {
           this.error = 'Login response did not include a token.';
           return;
         }
         setToken(token);
+        console.log('[LoginView] Token set in localStorage, now setting user');
         setCurrentUser(result && result.user ? result.user : null);
+        console.log('[LoginView] setCurrentUser called, checking isAuthenticated():', isAuthenticated());
         const next = typeof this.$route.query.next === 'string' ? this.$route.query.next : '/';
         console.log('[LoginView] Redirecting to:', next);
         this.$router.push(next);

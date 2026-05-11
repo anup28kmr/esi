@@ -88,17 +88,17 @@
           <span>Password</span>
           <input v-model="form.password" type="password" autocomplete="new-password" />
         </label>
-        <label>
-        <span>Street</span>
-        <input type="text" :value="address.street"  />
+<label>
+          <span>Street</span>
+          <input v-model="address.street" type="text" />
         </label>
         <label>
-        <span>City</span>
-        <input type="text" :value="address.city"  />
+          <span>City</span>
+          <input v-model="address.city" type="text" />
         </label>
         <label>
-        <span>Postal code</span>
-        <input type="text" :value="address.postalCode"  />
+          <span>Postal code</span>
+          <input v-model="address.postalCode" type="text" />
         </label>
       </div>
 

@@ -52,5 +52,16 @@ public class UserMapper {
   public void applyProfileUpdate(UpdateUserDTO userDTO, User user) {
     user.setFullName(userDTO.fullName());
     user.setPhoneNumber(userDTO.phoneNumber());
+    if(userDTO.address()!= null) {
+      ee.ut.anup.userservice.entity.Address newAddress = addressMapper.toEntity(userDTO.address());
+      newAddress.setUser(user);
+      newAddress.setDefault(true);
+
+      var existingAddresses = user.getAddresses();
+      if(existingAddresses != null && !existingAddresses.isEmpty()) {
+        existingAddresses.clear();
+      }
+      user.getAddresses().add(newAddress);
+    }
   }
 }
