@@ -45,3 +45,7 @@ target/
 # Spring Boot runtime artefacts
 HELP.md
 .env.development.local
+
+/.idea
+target
+/.vscode

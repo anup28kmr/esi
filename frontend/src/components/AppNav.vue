@@ -1,14 +1,15 @@
 <template>
   <nav class="app-nav">
     <div class="brand">
-      <router-link to="/">QuickBite</router-link>
+      <RouterLink to="/">QuickBite</RouterLink>
     </div>
     <ul class="links">
-      <li><router-link to="/">Home</router-link></li>
-      <li><router-link to="/restaurants">Restaurants</router-link></li>
-      <li v-if="authed"><router-link to="/cart">Cart</router-link></li>
-      <li v-if="authed"><router-link to="/orders">Orders</router-link></li>
-      <li><router-link to="/notifications">Notifications</router-link></li>
+      <li><RouterLink to="/">Home</RouterLink></li>
+      <li><RouterLink to="/restaurants">Restaurants</RouterLink></li>
+      <li v-if="authed"><RouterLink to="/profile">User Profile</RouterLink></li>
+      <li v-if="authed"><RouterLink to="/cart">Cart</RouterLink></li>
+      <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
+      <li><RouterLink to="/notifications">Notifications</RouterLink></li>
     </ul>
     <div class="auth">
       <template v-if="authed">
@@ -16,52 +17,44 @@
         <button class="btn-link" @click="onLogout">Logout</button>
       </template>
       <template v-else>
-        <router-link to="/login">Login</router-link>
-        <router-link to="/signup">Sign up</router-link>
+        <RouterLink to="/login">Login</RouterLink>
+        <RouterLink to="/signup">Sign up</RouterLink>
       </template>
     </div>
   </nav>
 </template>
 
 <script>
-import { isAuthenticated, clearToken, readClaims } from '../auth/token.js';
+import { RouterLink } from 'vue-router';
+import { authStateVersion, clearCurrentUser, clearToken, getCurrentUser, isAuthenticated, readClaims } from '../auth/token.js';
 
 export default {
   name: 'AppNav',
-  data() {
-    return { authVersion: 0 };
-  },
+  components: { RouterLink },
   computed: {
     authed() {
-      // Touch authVersion so the computed re-evaluates after login/logout.
+      // Touch the shared auth version ref so updates from login/logout become reactive.
       // eslint-disable-next-line no-unused-expressions
-      this.authVersion;
+      authStateVersion.value;
       return isAuthenticated();
     },
     displayName() {
+      // Keep the label in sync when the current-user payload changes.
+      // eslint-disable-next-line no-unused-expressions
+      authStateVersion.value;
+      const currentUser = getCurrentUser();
+      if (currentUser) {
+        return currentUser.fullName || currentUser.email || currentUser.userId || 'user';
+      }
       const claims = readClaims();
       if (!claims) return 'user';
       return claims.sub || claims.userId || 'user';
     }
   },
-  watch: {
-    $route() {
-      this.authVersion += 1;
-    }
-  },
-  mounted() {
-    window.addEventListener('storage', this.onStorage);
-  },
-  beforeUnmount() {
-    window.removeEventListener('storage', this.onStorage);
-  },
   methods: {
-    onStorage(event) {
-      if (event.key === 'quickbite.jwt') this.authVersion += 1;
-    },
     onLogout() {
       clearToken();
-      this.authVersion += 1;
+      clearCurrentUser();
       this.$router.push({ name: 'login' });
     }
   }
@@ -100,11 +93,6 @@ export default {
   border-radius: 4px;
 }
 
-.links a.router-link-active,
-.auth a.router-link-active {
-  background: rgba(210, 105, 30, 0.1);
-  color: var(--qb-accent);
-}
 
 .auth {
   margin-left: auto;
