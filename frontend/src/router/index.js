@@ -13,6 +13,7 @@ import MenuItemDetailView from '../views/MenuItemDetailView.vue';
 import CartView from '../views/CartView.vue';
 import OrderStatusView from '../views/OrderStatusView.vue';
 import NotificationsView from '../views/NotificationsView.vue';
+import UserView from '../views/UserView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 
 /**
@@ -76,6 +77,12 @@ const routes = [
     path: '/notifications',
     name: 'notifications',
     component: NotificationsView
+  },
+  {
+    path: '/profile',
+    name: 'user-profile',
+    component: UserView,
+    meta: { requiresAuth: true }
   },
   { path: '/:pathMatch(.*)*', name: 'not-found', component: NotFoundView }
 ];

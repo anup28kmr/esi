@@ -1,3 +1,5 @@
+import { ref } from 'vue';
+
 /**
  * Token storage helpers. localStorage is the source of truth for the
  * bearer token; everything else (router guard, API client, nav bar)
@@ -6,6 +8,12 @@
  */
 
 const TOKEN_KEY = 'quickbite.jwt';
+const CURRENT_USER_KEY = 'quickbite.currentUser';
+export const authStateVersion = ref(0);
+
+function notifyAuthChange() {
+  authStateVersion.value += 1;
+}
 
 export function getToken() {
   try {
@@ -21,10 +29,43 @@ export function setToken(token) {
   } else {
     localStorage.removeItem(TOKEN_KEY);
   }
+  notifyAuthChange();
 }
 
 export function clearToken() {
   localStorage.removeItem(TOKEN_KEY);
+  notifyAuthChange();
+}
+
+export function getCurrentUser() {
+  try {
+    const raw = localStorage.getItem(CURRENT_USER_KEY);
+    return raw ? JSON.parse(raw) : null;
+  } catch (_e) {
+    return null;
+  }
+}
+
+export function setCurrentUser(user) {
+  try {
+    if (user) {
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user));
+    } else {
+      localStorage.removeItem(CURRENT_USER_KEY);
+    }
+    notifyAuthChange();
+  } catch (_e) {
+    // Ignore storage failures so auth still works with the token alone.
+  }
+}
+
+export function clearCurrentUser() {
+  try {
+    localStorage.removeItem(CURRENT_USER_KEY);
+    notifyAuthChange();
+  } catch (_e) {
+    // Ignore storage failures.
+  }
 }
 
 export function isAuthenticated() {
@@ -53,16 +94,15 @@ export function readClaims() {
 export function readRole() {
   const claims = readClaims();
   if (!claims) return null;
-  return claims.role || (Array.isArray(claims.roles) ? claims.roles[0] : null);
+  const role = claims.role || (Array.isArray(claims.roles) ? claims.roles[0] : null);
+  if (!role) return null;
+  const normalized = String(role).replace(/\s+/g, '_').replace(/-/g, '_').toUpperCase();
+  if (normalized === 'RESTAURANTOWNER') return 'RESTAURANT_OWNER';
+  return normalized;
 }
 
-export function readUserId() {
-  const claims = readClaims();
-  if (!claims) return null;
-  return claims.userId || claims.sub || null;
-}
-
+// eslint-disable-next-line no-unused-vars
 export function canManageRestaurants() {
   const role = readRole();
-  return role === 'RestaurantOwner' || role === 'Admin';
+  return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
 }

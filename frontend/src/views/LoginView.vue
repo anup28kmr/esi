@@ -16,18 +16,20 @@
         <button type="submit" :disabled="submitting">
           {{ submitting ? 'Signing in…' : 'Sign in' }}
         </button>
-        <router-link to="/signup" class="muted">No account? Sign up</router-link>
+        <RouterLink to="/signup" class="muted">No account? Sign up</RouterLink>
       </div>
     </form>
   </section>
 </template>
 
 <script>
+import { RouterLink } from 'vue-router';
 import { api, ApiError } from '../api/client.js';
-import { setToken } from '../auth/token.js';
+import { isAuthenticated, setCurrentUser, setToken } from '../auth/token.js';
 
 export default {
   name: 'LoginView',
+  components: { RouterLink },
   data() {
     return {
       email: '',
@@ -38,19 +40,33 @@ export default {
   },
   methods: {
     async onSubmit() {
+      console.log('[LoginView] onSubmit called');
+      console.log('[LoginView] Form data:', { email: this.email });
       this.error = '';
       this.submitting = true;
       try {
+        console.log('[LoginView] Sending POST /api/auth/login');
         const result = await api.post('/api/auth/login', {
           email: this.email,
           password: this.password
         });
+        console.log('[LoginView] Login response:', result);
         const token = result && (result.token || result.accessToken || result.jwt);
-        if (!token) throw new ApiError('Login response did not include a token.');
+        console.log('[LoginView] Token extracted:', token ? 'YES' : 'NO');
+        console.log('[LoginView] User data:', result && result.user);
+        if (!token) {
+          this.error = 'Login response did not include a token.';
+          return;
+        }
         setToken(token);
+        console.log('[LoginView] Token set in localStorage, now setting user');
+        setCurrentUser(result && result.user ? result.user : null);
+        console.log('[LoginView] setCurrentUser called, checking isAuthenticated():', isAuthenticated());
         const next = typeof this.$route.query.next === 'string' ? this.$route.query.next : '/';
+        console.log('[LoginView] Redirecting to:', next);
         this.$router.push(next);
       } catch (err) {
+        console.error('[LoginView] Login error:', err);
         this.error = err instanceof ApiError ? err.message : 'Sign-in failed.';
       } finally {
         this.submitting = false;
