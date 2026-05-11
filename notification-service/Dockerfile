@@ -1,18 +1,23 @@
 # syntax=docker/dockerfile:1
 #
-# Pre-built jar layout: run `./mvnw -DskipTests package` (or have CI run
-# it) before `docker compose up --build`. Building inside an emulated
-# multi-arch Maven image was unstable on the local Colima setup, so the
-# build is kept on the host where it's cheap and fast.
+# Self-contained multi-stage build. Maven runs inside the build image,
+# so teammates do not need to run `./mvnw package` on the host first —
+# `docker compose up --build` does the whole thing.
 
+# Build stage
+FROM maven:3.9-eclipse-temurin-21 AS build
+WORKDIR /workspace
+COPY pom.xml .
+RUN mvn -B -DskipTests dependency:go-offline || true
+COPY src ./src
+RUN mvn -B -DskipTests package
+
+# Runtime stage
 FROM eclipse-temurin:21-jre
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
  && rm -rf /var/lib/apt/lists/*
 WORKDIR /app
-COPY target/notification-service-*.jar app.jar
+COPY --from=build /workspace/target/notification-service-*.jar app.jar
 EXPOSE 8087
-# -XX:TieredStopAtLevel=1 keeps the JVM on the C1 compiler. The C2
-# compiler segfaults under qemu user-mode emulation (Apple Silicon →
-# x86_64 Colima VM). Real ARM/Linux deployments can drop this flag.
-ENTRYPOINT ["java", "-XX:TieredStopAtLevel=1", "-jar", "/app/app.jar"]
+ENTRYPOINT ["java", "-jar", "/app/app.jar"]

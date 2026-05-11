@@ -82,8 +82,8 @@ services:
       PAYMENT_SERVICE_PORT: 8085
       DELIVERY_SERVICE_HOST: delivery-service
       DELIVERY_SERVICE_PORT: 8086
-#      NOTIFICATION_SERVICE_HOST: notification-service
-#      NOTIFICATION_SERVICE_PORT: 8087
+      NOTIFICATION_SERVICE_HOST: notification-service
+      NOTIFICATION_SERVICE_PORT: 8087
     ports:
       - "9090:8080"
     depends_on:
@@ -93,7 +93,7 @@ services:
       - menu-service
       - payment-service
       - delivery-service
-#      - notification-service
+      - notification-service
     networks: [quickbite-net]
 
   # ─── restaurant-service stack ─────────────────────────────────────────────
@@ -255,69 +255,65 @@ services:
     networks: [quickbite-net]
 
   # === Mike-Alfa (notification-service + Kafka event broker) ===
+  # Kafka-compatible event broker. Redpanda speaks the same Kafka wire
+  # protocol so Spring Kafka and rpk work unchanged; swap to apache/kafka
+  # in any environment with native x86_64 if you prefer.
+  kafka:
+    image: redpandadata/redpanda:v24.2.4
+    command:
+      - redpanda
+      - start
+      - --smp=1
+      - --memory=512M
+      - --reserve-memory=0M
+      - --overprovisioned
+      - --node-id=0
+      - --check=false
+      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
+      - --advertise-kafka-addr=PLAINTEXT://kafka:9092
+    ports:
+      - "${KAFKA_HOST_PORT:-9092}:9092"
+    healthcheck:
+      test: ["CMD-SHELL", "rpk cluster info --brokers kafka:9092 >/dev/null 2>&1"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 20s
+    networks: [quickbite-net]
 
-  # Kafka-compatible event broker. We use Redpanda (Go binary, Kafka
-  # protocol over the wire) instead of Apache Kafka because the JVM
-  # JIT compiler crashes under qemu user-mode emulation on Apple
-  # Silicon Colima. Spring Kafka, kafka-topics.sh, etc. all talk to
-  # this broker transparently. Replace with apache/kafka in any
-  # environment that has native x86_64 hardware available.
-#  kafka:
-#    image: redpandadata/redpanda:v24.2.4
-#    command:
-#      - redpanda
-#      - start
-#      - --smp=1
-#      - --memory=512M
-#      - --reserve-memory=0M
-#      - --overprovisioned
-#      - --node-id=0
-#      - --check=false
-#      - --kafka-addr=PLAINTEXT://0.0.0.0:9092
-#      - --advertise-kafka-addr=PLAINTEXT://kafka:9092
-#    ports:
-#      - "${KAFKA_HOST_PORT:-9092}:9092"
-#    healthcheck:
-#      test: ["CMD-SHELL", "rpk cluster info --brokers kafka:9092 >/dev/null 2>&1"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 18
-#      start_period: 20s
-#    networks: [quickbite-net]
-#
-#  notification-db:
-#    image: postgres:16-alpine
-#    environment:
-#      POSTGRES_DB: notification_db
-#      POSTGRES_USER: notification
-#      POSTGRES_PASSWORD: notification
-#    ports:
-#      - "${NOTIFICATION_DB_HOST_PORT:-5436}:5432"
-#    healthcheck:
-#      test: ["CMD-SHELL", "pg_isready -U notification -d notification_db"]
-#      interval: 5s
-#      timeout: 5s
-#      retries: 12
-#    networks: [quickbite-net]
+  notification-db:
+    image: postgres:16-alpine
+    environment:
+      POSTGRES_DB: notification_db
+      POSTGRES_USER: notification
+      POSTGRES_PASSWORD: notification
+    ports:
+      - "${NOTIFICATION_DB_HOST_PORT:-5436}:5432"
+    healthcheck:
+      test: ["CMD-SHELL", "pg_isready -U notification -d notification_db"]
+      interval: 5s
+      timeout: 5s
+      retries: 12
+    networks: [quickbite-net]
 
-#  notification-service:
-#    build: ./notification-service
-#    environment:
-#      SPRING_PROFILES_ACTIVE: docker
-#    ports:
-#      - "8087:8087"
-#    depends_on:
-#      notification-db:
-#        condition: service_healthy
-#      kafka:
-#        condition: service_healthy
-#    healthcheck:
-#      test: ["CMD", "curl", "-fsS", "http://localhost:8087/actuator/health"]
-#      interval: 10s
-#      timeout: 5s
-#      retries: 18
-#      start_period: 30s
-#    networks: [quickbite-net]
+  notification-service:
+    build: ./notification-service
+    environment:
+      SPRING_PROFILES_ACTIVE: docker
+    ports:
+      - "8087:8087"
+    depends_on:
+      notification-db:
+        condition: service_healthy
+      kafka:
+        condition: service_healthy
+    healthcheck:
+      test: ["CMD", "curl", "-fsS", "http://localhost:8087/actuator/health"]
+      interval: 10s
+      timeout: 5s
+      retries: 18
+      start_period: 30s
+    networks: [quickbite-net]
 
 networks:
   quickbite-net:
