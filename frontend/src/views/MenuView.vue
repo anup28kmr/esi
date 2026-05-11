@@ -59,6 +59,14 @@
           <router-link :to="{ name: 'menu-item-detail', params: { id: item.menuItemId } }" class="btn-link">
             {{ canManage ? 'Edit' : 'Details' }}
           </router-link>
+          <button
+            v-if="!canManage && item.isAvailable"
+            type="button"
+            class="add-btn"
+            @click="onAddToCart(item)"
+          >
+            {{ inCart(item.menuItemId) ? `In cart × ${inCart(item.menuItemId)}` : 'Add to cart' }}
+          </button>
         </div>
       </li>
     </ul>
@@ -72,10 +80,15 @@
 <script>
 import { api, ApiError } from '../api/client.js';
 import { canManageRestaurants } from '../auth/token.js';
+import { useCart } from '../composables/useCart.js';
 
 export default {
   name: 'MenuView',
   props: { id: { type: String, required: true } },
+  setup() {
+    const { cart, addItem } = useCart();
+    return { cart, addItem };
+  },
   data() {
     return {
       restaurant: null,
@@ -136,6 +149,13 @@ export default {
       if (item.priceAmount === null || item.priceAmount === undefined) return '—';
       const amount = Number(item.priceAmount);
       return `${amount.toFixed(2)} ${item.priceCurrency || ''}`.trim();
+    },
+    inCart(menuItemId) {
+      return this.cart.items.find((i) => i.menuItemId === menuItemId)?.quantity || 0;
+    },
+    onAddToCart(item) {
+      const restaurantName = this.restaurant?.name || '';
+      this.addItem(item, this.id, restaurantName);
     }
   }
 };
@@ -224,7 +244,23 @@ export default {
 
 .description { margin: 0.3rem 0; font-size: 0.9rem; }
 
-.card-actions { margin-top: auto; }
+.card-actions {
+  margin-top: auto;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.5rem;
+}
+
+.add-btn {
+  background: var(--qb-accent);
+  color: #fff;
+  border: 0;
+  border-radius: 4px;
+  padding: 0.35rem 0.7rem;
+  font-size: 0.85rem;
+  cursor: pointer;
+}
 
 .btn-link {
   background: transparent;

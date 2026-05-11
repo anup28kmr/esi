@@ -1,10 +1,209 @@
 <template>
-  <section>
-    <h1>Cart</h1>
-    <p class="muted">Order placement lands later in the roadmap. The cart route is auth-protected today.</p>
+  <section class="cart">
+    <header class="list-header">
+      <h1>Your cart</h1>
+      <p v-if="cart.restaurantId" class="muted">
+        From
+        <router-link :to="{ name: 'restaurant-menu', params: { id: cart.restaurantId } }">
+          {{ cart.restaurantName || 'restaurant' }}
+        </router-link>
+      </p>
+    </header>
+
+    <div v-if="error" class="error-banner">{{ error }}</div>
+
+    <div v-if="cart.items.length === 0" class="empty">
+      Your cart is empty.
+      <router-link to="/restaurants" class="btn-link">Browse restaurants</router-link>
+    </div>
+
+    <ul v-else class="lines">
+      <li v-for="line in cart.items" :key="line.menuItemId" class="line">
+        <div class="line-head">
+          <h3>{{ line.name }}</h3>
+          <span class="muted">{{ line.unitPrice.toFixed(2) }} {{ line.currency }} each</span>
+        </div>
+        <div class="line-controls">
+          <button type="button" class="qty-btn" @click="setQuantity(line.menuItemId, line.quantity - 1)">−</button>
+          <input
+            class="qty-input"
+            type="number"
+            min="0"
+            :value="line.quantity"
+            @change="onQtyChange(line.menuItemId, $event)"
+          />
+          <button type="button" class="qty-btn" @click="setQuantity(line.menuItemId, line.quantity + 1)">+</button>
+          <span class="line-total">{{ (line.unitPrice * line.quantity).toFixed(2) }} {{ line.currency }}</span>
+          <button type="button" class="btn-link remove" @click="removeItem(line.menuItemId)">Remove</button>
+        </div>
+      </li>
+    </ul>
+
+    <div v-if="cart.items.length > 0" class="summary">
+      <div class="totals">
+        <span>Total</span>
+        <strong>{{ subtotal.toFixed(2) }} {{ currency }}</strong>
+      </div>
+      <div class="actions">
+        <button type="button" class="btn-link" :disabled="placing" @click="clear">Clear cart</button>
+        <button type="button" class="btn" :disabled="placing || !canPlace" @click="placeOrder">
+          {{ placing ? 'Placing order…' : 'Place order' }}
+        </button>
+      </div>
+      <p v-if="!canPlace && !placing" class="muted small">
+        Sign in to place orders.
+      </p>
+    </div>
   </section>
 </template>
 
 <script>
-export default { name: 'CartView' };
+import { api, ApiError } from '../api/client.js';
+import { getCurrentUser } from '../auth/token.js';
+import { useCart } from '../composables/useCart.js';
+
+export default {
+  name: 'CartView',
+  setup() {
+    const { cart, subtotal, currency, setQuantity, removeItem, clear } = useCart();
+    return { cart, subtotal, currency, setQuantity, removeItem, clear };
+  },
+  data() {
+    return { placing: false, error: '' };
+  },
+  computed: {
+    canPlace() {
+      const user = getCurrentUser();
+      return Boolean(user && user.userId && this.cart.items.length > 0 && this.cart.restaurantId);
+    }
+  },
+  methods: {
+    onQtyChange(menuItemId, event) {
+      this.setQuantity(menuItemId, event.target.value);
+    },
+    async placeOrder() {
+      this.error = '';
+      const user = getCurrentUser();
+      if (!user || !user.userId) {
+        this.error = 'You must be signed in to place an order.';
+        return;
+      }
+      this.placing = true;
+      try {
+        // order-service identifies the customer by an X-User-Id header
+        // (Long). The API gateway doesn't inject it -- we send it directly.
+        // Body shape per OrderController: restaurantId + items[{ menuItemId,
+        // name, unitPrice, quantity }]. The server computes totalAmount.
+        const body = {
+          restaurantId: this.cart.restaurantId,
+          items: this.cart.items.map((i) => ({
+            menuItemId: i.menuItemId,
+            name: i.name,
+            unitPrice: i.unitPrice,
+            quantity: i.quantity
+          }))
+        };
+        const placed = await api.post('/api/orders', body, {
+          headers: { 'X-User-Id': String(user.userId) }
+        });
+        this.clear();
+        this.$router.push({ name: 'orders', params: { id: String(placed.orderId) } });
+      } catch (err) {
+        this.error = err instanceof ApiError ? err.message : 'Could not place the order.';
+      } finally {
+        this.placing = false;
+      }
+    }
+  }
+};
 </script>
+
+<style scoped>
+.cart { max-width: 720px; }
+
+.list-header { margin-bottom: 1rem; }
+.list-header h1 { margin: 0 0 0.25rem; }
+
+.empty {
+  border: 1px dashed var(--qb-border);
+  padding: 1.25rem;
+  border-radius: 6px;
+  background: #fff;
+  color: var(--qb-muted);
+  text-align: center;
+}
+.empty .btn-link { margin-left: 0.5rem; }
+
+.lines { list-style: none; margin: 0; padding: 0; display: flex; flex-direction: column; gap: 0.5rem; }
+
+.line {
+  background: #fff;
+  border: 1px solid var(--qb-border);
+  border-radius: 6px;
+  padding: 0.75rem 1rem;
+  display: flex;
+  flex-direction: column;
+  gap: 0.4rem;
+}
+
+.line-head { display: flex; align-items: baseline; justify-content: space-between; gap: 0.5rem; }
+.line-head h3 { margin: 0; color: var(--qb-accent); font-size: 1rem; }
+
+.line-controls {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+}
+
+.qty-btn {
+  background: #f3f4f6;
+  color: var(--qb-fg);
+  border: 1px solid var(--qb-border);
+  border-radius: 4px;
+  width: 2rem;
+  height: 2rem;
+  padding: 0;
+  cursor: pointer;
+  font-size: 1rem;
+}
+
+.qty-input {
+  width: 3.5rem;
+  text-align: center;
+  padding: 0.3rem;
+}
+
+.line-total {
+  margin-left: auto;
+  font-weight: 600;
+}
+
+.remove { color: #9b1c1c; }
+
+.summary {
+  margin-top: 1rem;
+  padding: 1rem;
+  background: #fff;
+  border: 1px solid var(--qb-border);
+  border-radius: 6px;
+}
+
+.totals {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  font-size: 1.1rem;
+}
+
+.actions { display: flex; gap: 0.75rem; margin-top: 0.75rem; justify-content: flex-end; }
+
+.btn-link {
+  background: transparent;
+  color: var(--qb-accent);
+  border: 0;
+  padding: 0.5rem 0.6rem;
+  cursor: pointer;
+}
+
+.small { font-size: 0.85rem; margin-top: 0.5rem; }
+</style>

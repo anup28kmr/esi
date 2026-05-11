@@ -10,21 +10,18 @@ RUN npm ci --no-audit --no-fund
 
 COPY . .
 
-# Production build uses .env.production (empty VITE_APP_API_BASE_URL)
-# so the browser hits /api/** same-origin and nginx proxies to the
-# gateway. Override at build time if you need a different target.
-ARG VITE_APP_API_BASE_URL
-ENV VITE_APP_API_BASE_URL=${VITE_APP_API_BASE_URL}
+# `VUE_APP_API_BASE_URL` is what Vue CLI bakes into the bundle. Default
+# matches `.env.production` (http://localhost:9090 -- the api-gateway's
+# host-published port). Override at build time to point the SPA at a
+# different gateway.
+ARG VUE_APP_API_BASE_URL
+ENV VUE_APP_API_BASE_URL=${VUE_APP_API_BASE_URL}
 RUN npm run build
 
-# Runtime stage -- serve static assets plus a /api -> gateway proxy.
+# Runtime stage -- serve static assets only. The browser calls the
+# api-gateway directly, so there is no /api reverse proxy here.
 FROM nginx:1.27-alpine
 COPY --from=build /app/dist /usr/share/nginx/html
 COPY nginx.conf.template /etc/nginx/templates/default.conf.template
-
-# `GATEWAY_UPSTREAM` is substituted into the nginx template at
-# container start (nginx:1.27-alpine ships envsubst + the
-# /etc/nginx/templates pipeline).
-ENV GATEWAY_UPSTREAM=http://api-gateway:9090
 
 EXPOSE 80

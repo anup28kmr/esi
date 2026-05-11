@@ -1,7 +1,5 @@
 package ee.ut.esi.quickbite.restaurant.security;
 
-import com.fasterxml.jackson.databind.ObjectMapper;
-import ee.ut.esi.quickbite.restaurant.exception.ErrorResponse;
 import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.JwtException;
 import io.jsonwebtoken.Jwts;
@@ -12,8 +10,6 @@ import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
 import org.springframework.http.HttpHeaders;
-import org.springframework.http.HttpStatus;
-import org.springframework.http.MediaType;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
 import org.springframework.security.core.context.SecurityContextHolder;
@@ -22,7 +18,6 @@ import org.springframework.web.filter.OncePerRequestFilter;
 
 import java.io.IOException;
 import java.security.Key;
-import java.time.OffsetDateTime;
 import java.util.List;
 import java.util.UUID;
 
@@ -33,12 +28,10 @@ public class JwtAuthFilter extends OncePerRequestFilter {
 
     private final JwtProperties jwt;
     private final Key signingKey;
-    private final ObjectMapper objectMapper;
 
-    public JwtAuthFilter(JwtProperties jwt, ObjectMapper objectMapper) {
+    public JwtAuthFilter(JwtProperties jwt) {
         this.jwt = jwt;
         this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwt.secret()));
-        this.objectMapper = objectMapper;
     }
 
     @Override
@@ -75,12 +68,17 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
-
-            chain.doFilter(request, response);
         } catch (JwtException | IllegalArgumentException ex) {
+            // Token is unrecognized (bad signature, missing claims, wrong issuer,
+            // user-id not a UUID, etc.). Don't reject outright -- clear any partial
+            // context and let the filter chain's authorization rules decide. This
+            // way permitAll() endpoints still succeed (anonymously) and the SPA
+            // doesn't get logged out when it browses a public page with a token
+            // that this service can't interpret. Protected endpoints return 401
+            // via RestAuthEntryPoints.unauthorizedEntryPoint().
             SecurityContextHolder.clearContext();
-            writeUnauthorized(request, response, "Invalid or expired token");
         }
+        chain.doFilter(request, response);
     }
 
     private static String requireClaim(Claims claims, String name) {
@@ -89,20 +87,5 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             throw new JwtException("missing '" + name + "' claim");
         }
         return value;
-    }
-
-    private void writeUnauthorized(HttpServletRequest request, HttpServletResponse response, String message)
-        throws IOException {
-        response.setStatus(HttpStatus.UNAUTHORIZED.value());
-        response.setContentType(MediaType.APPLICATION_JSON_VALUE);
-        ErrorResponse body = new ErrorResponse(
-            OffsetDateTime.now(),
-            HttpStatus.UNAUTHORIZED.value(),
-            HttpStatus.UNAUTHORIZED.getReasonPhrase(),
-            message,
-            request.getRequestURI(),
-            null
-        );
-        objectMapper.writeValue(response.getWriter(), body);
     }
 }

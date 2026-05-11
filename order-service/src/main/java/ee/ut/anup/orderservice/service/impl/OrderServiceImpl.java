@@ -110,6 +110,13 @@ public class OrderServiceImpl implements OrderService {
     }
 
     @Override
+    public List<OrderResponse> getOrdersByRestaurant(String restaurantId) {
+        return orderRepository.findByRestaurantId(restaurantId).stream()
+                .map(orderMapper::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
     public List<OrderItemResponse> getOrderItems(Long id) {
         Order order = orderRepository.findById(id)
                 .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));

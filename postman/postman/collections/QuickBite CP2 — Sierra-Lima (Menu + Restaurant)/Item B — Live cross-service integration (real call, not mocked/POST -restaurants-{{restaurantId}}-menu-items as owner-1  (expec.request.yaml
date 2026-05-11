@@ -1,0 +1,50 @@
+$kind: http-request
+name: POST /restaurants/{{restaurantId}}/menu-items as owner-1  (expect 201)
+url: "{{gatewayUrl}}/restaurants/{{restaurantId}}/menu-items"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{jwt}}
+body:
+  type: text
+  content: |-
+    {
+      "name": "Postman positive {{$timestamp}}",
+      "description": "Created via the CP2 Postman collection (owner-1, expect 201).",
+      "priceAmount": 1.00,
+      "priceCurrency": "EUR",
+      "category": "Main",
+      "isAvailable": true
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      // Mint owner-1 JWT inline so the actor identity is set
+      // before {{jwt}} is interpolated into the Authorization header.
+      const ACTOR = pm.collectionVariables.get('userOwner1');
+      const ROLE  = 'RestaurantOwner';
+      function b64url(wa) {
+          return CryptoJS.enc.Base64.stringify(wa)
+              .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      }
+      const now = Math.floor(Date.now()/1000);
+      const hdr = JSON.stringify({ alg:'HS256', typ:'JWT' });
+      const pld = JSON.stringify({
+          iss: pm.collectionVariables.get('jwtIssuer'),
+          sub: ACTOR, userId: ACTOR, role: ROLE, tokenType: 'USER',
+          iat: now, exp: now + 3600
+      });
+      const h = b64url(CryptoJS.enc.Utf8.parse(hdr));
+      const p = b64url(CryptoJS.enc.Utf8.parse(pld));
+      const si = h + '.' + p;
+      const sig = b64url(CryptoJS.HmacSHA256(si, pm.collectionVariables.get('jwtSecret')));
+      pm.variables.set('jwt', si + '.' + sig);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('201 Created', () => pm.response.to.have.status(201));
+      const j = pm.response.json();
+      pm.test('returned restaurantId matches request', () => pm.expect(j.restaurantId).to.eql(pm.collectionVariables.get('restaurantId')));
+      pm.test('persisted menuItemId', () => pm.expect(j.menuItemId).to.match(/^[0-9a-f-]{36}$/));
+    language: text/javascript
+order: 1000

@@ -1,0 +1,13 @@
+$kind: http-request
+name: GET /restaurants/{{restaurantId}}/menu-items  (4 seeded items)
+url: "{{gatewayUrl}}/restaurants/{{restaurantId}}/menu-items"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('200 OK', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('returns an array', () => pm.expect(j).to.be.an('array'));
+      pm.test('seed items present (>= 4)', () => pm.expect(j.length).to.be.at.least(4));
+    language: text/javascript
+order: 3000

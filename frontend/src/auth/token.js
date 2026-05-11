@@ -15,7 +15,16 @@ function notifyAuthChange() {
   authStateVersion.value += 1;
 }
 
+// Reading `authStateVersion.value` inside a Vue reactive context (computed,
+// watchEffect, template) registers it as a dependency, so any computed that
+// calls these helpers automatically re-evaluates when notifyAuthChange()
+// fires. Outside a reactive context the access is a harmless no-op.
+function track() {
+  void authStateVersion.value;
+}
+
 export function getToken() {
+  track();
   try {
     return localStorage.getItem(TOKEN_KEY);
   } catch (_e) {
@@ -38,6 +47,7 @@ export function clearToken() {
 }
 
 export function getCurrentUser() {
+  track();
   try {
     const raw = localStorage.getItem(CURRENT_USER_KEY);
     return raw ? JSON.parse(raw) : null;

@@ -1,0 +1,13 @@
+$kind: http-request
+name: GET /restaurants/{{restaurantId}}  (Pizza Antonio)
+url: "{{gatewayUrl}}/restaurants/{{restaurantId}}"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('200 OK', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('matching restaurantId', () => pm.expect(j.restaurantId).to.eql(pm.collectionVariables.get('restaurantId')));
+      pm.test('ownerId is user-0001', () => pm.expect(j.ownerId).to.eql(pm.collectionVariables.get('userOwner1')));
+    language: text/javascript
+order: 2000
