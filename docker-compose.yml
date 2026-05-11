@@ -1,5 +1,13 @@
 name: quickbite
 
+# Shared JWT signing config. Every service that issues or verifies tokens must
+# use the same secret + issuer, or downstream services will reject the token
+# and the SPA will log the user out. Set JWT_SECRET / JWT_ISSUER in the
+# environment (or a .env file beside docker-compose.yml) to override.
+x-jwt-env: &jwt-env
+  JWT_SECRET: ${JWT_SECRET:-dGVzdC1zZWNyZXQtZm9yLWRldi1vbmx5LWRvLW5vdC11c2UtaW4tcHJvZC0xMjM0NTY=}
+  JWT_ISSUER: ${JWT_ISSUER:-quickbite-user-service}
+
 services:
   # ─── user-service stack ───────────────────────────────────────────────────
   postgres-user:
@@ -20,6 +28,7 @@ services:
   user-service:
     build: ./user-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres-user
       DB_PORT: 5432
@@ -136,6 +145,7 @@ services:
   restaurant-service:
     build: ./restaurant-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8081:8081"
@@ -153,6 +163,7 @@ services:
   menu-service:
     build: ./menu-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8082:8082"
@@ -174,11 +185,9 @@ services:
     build:
       context: ./frontend
       args:
-        VITE_APP_API_BASE_URL: http://localhost:9090
+        VUE_APP_API_BASE_URL: http://localhost:9090
     ports:
       - "8090:80"
-    environment:
-      GATEWAY_UPSTREAM: http://api-gateway:9090
     depends_on:
       - api-gateway
     healthcheck:

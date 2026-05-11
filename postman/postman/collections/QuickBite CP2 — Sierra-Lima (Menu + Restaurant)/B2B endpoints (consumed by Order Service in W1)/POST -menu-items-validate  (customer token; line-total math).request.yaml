@@ -1,0 +1,46 @@
+$kind: http-request
+name: POST /menu-items/validate  (customer token; line-total math)
+url: "{{gatewayUrl}}/menu-items/validate"
+method: POST
+headers:
+  Content-Type: application/json
+  Authorization: Bearer {{jwt}}
+body:
+  type: text
+  content: |-
+    {
+      "items": [
+        { "menuItemId": "{{menuItemId}}", "quantity": 2 }
+      ]
+    }
+scripts:
+  - type: beforeRequest
+    code: |-
+      const ACTOR = pm.collectionVariables.get('userCustomer');
+      const ROLE  = 'Customer';
+      function b64url(wa) {
+          return CryptoJS.enc.Base64.stringify(wa)
+              .replace(/\+/g,'-').replace(/\//g,'_').replace(/=+$/,'');
+      }
+      const now = Math.floor(Date.now()/1000);
+      const hdr = JSON.stringify({ alg:'HS256', typ:'JWT' });
+      const pld = JSON.stringify({
+          iss: pm.collectionVariables.get('jwtIssuer'),
+          sub: ACTOR, userId: ACTOR, role: ROLE, tokenType: 'USER',
+          iat: now, exp: now + 3600
+      });
+      const h = b64url(CryptoJS.enc.Utf8.parse(hdr));
+      const p = b64url(CryptoJS.enc.Utf8.parse(pld));
+      const si = h + '.' + p;
+      const sig = b64url(CryptoJS.HmacSHA256(si, pm.collectionVariables.get('jwtSecret')));
+      pm.variables.set('jwt', si + '.' + sig);
+    language: text/javascript
+  - type: afterResponse
+    code: |-
+      pm.test('200 OK', () => pm.response.to.have.status(200));
+      const j = pm.response.json();
+      pm.test('allValid is true', () => pm.expect(j.allValid).to.eql(true));
+      pm.test('totalAmount = 17.00 (8.50 * 2)', () => pm.expect(Number(j.totalAmount)).to.eql(17.00));
+      pm.test('currency EUR', () => pm.expect(j.currency).to.eql('EUR'));
+    language: text/javascript
+order: 2000

@@ -1,0 +1,24 @@
+$kind: collection
+description: |-
+  Pre-baked CP2 verification flow for the QuickBite stack at commit 3d26d05 (Menu + Restaurant services owned by Sierra-Lima). Mirrors the README §1–§4 checklist:
+
+  - Folder **Item A** — public reads against both services prove A=4: "Second Responsibility runs (A+B+D from CP1)".
+  - Folder **Item B** — owner / non-owner POST proves the live cross-service ownership lookup is real and not mocked (B=2).
+  - Folder **B2B endpoints** — `validate` and `availability` are the W1 hops Order Service consumes.
+  - Folder **Negative auth** — confirms the JWT filter rejects missing / wrong-issuer tokens.
+
+  No Python required. Each authenticated request mints its own fresh HS256 JWT inline using Postman's bundled `crypto-js`, signed with the dev secret pinned in `application.properties`. Inlining the mint per-request (rather than running it once collection-wide) keeps the actor identity local to the request, which is what makes the owner-1 vs owner-2 contrast in folder Item B work.
+
+  Prerequisite: stack is up via `docker compose up -d --build` from the repo root (or with `RESTAURANT_DB_HOST_PORT` / `MENU_DB_HOST_PORT` overrides if 5432/5433 are taken).
+variables:
+  gatewayUrl: http://localhost:8080
+  frontendUrl: http://localhost:8090
+  restaurantId: d0000001-0000-0000-0000-000000000001
+  restaurantId2: d0000003-0000-0000-0000-000000000003
+  menuItemId: e0000011-0000-0000-0000-000000000011
+  jwtSecret: test-secret-for-dev-only-do-not-use-in-prod-123456
+  jwtIssuer: quickbite-user-service
+  userOwner1: 00000000-0000-0000-0000-000000000001
+  userOwner2: 00000000-0000-0000-0000-000000000002
+  userCustomer: 00000000-0000-0000-0000-0000000000c1
+  userAdmin: 00000000-0000-0000-0000-0000000000a1

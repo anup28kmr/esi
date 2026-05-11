@@ -1,7 +1,6 @@
 <template>
   <section class="login">
     <h1>Sign in</h1>
-    <p class="muted">Authenticates against <code>POST /api/auth/login</code> on the gateway.</p>
 
     <form @submit.prevent="onSubmit">
       <label for="email">Email</label>
@@ -10,6 +9,7 @@
       <label for="password">Password</label>
       <input id="password" v-model="password" type="password" autocomplete="current-password" required />
 
+      <div v-if="success" class="success-banner">{{ success }}</div>
       <div v-if="error" class="error-banner">{{ error }}</div>
 
       <div class="actions">
@@ -35,14 +35,21 @@ export default {
       email: '',
       password: '',
       submitting: false,
-      error: ''
+      error: '',
+      success: ''
     };
+  },
+  created() {
+    if (this.$route.query.registered === '1') {
+      this.success = 'Account created. Please sign in.';
+    }
   },
   methods: {
     async onSubmit() {
       console.log('[LoginView] onSubmit called');
       console.log('[LoginView] Form data:', { email: this.email });
       this.error = '';
+      this.success = '';
       this.submitting = true;
       try {
         console.log('[LoginView] Sending POST /api/auth/login');
@@ -80,4 +87,12 @@ export default {
 .login { max-width: 420px; }
 .actions { display: flex; align-items: center; gap: 1rem; margin-top: 1rem; }
 .actions a { color: var(--qb-muted); }
+.success-banner {
+  background: #dcfce7;
+  color: #166534;
+  border: 1px solid #86efac;
+  padding: 0.5rem 0.8rem;
+  border-radius: 4px;
+  margin: 0.75rem 0 0;
+}
 </style>

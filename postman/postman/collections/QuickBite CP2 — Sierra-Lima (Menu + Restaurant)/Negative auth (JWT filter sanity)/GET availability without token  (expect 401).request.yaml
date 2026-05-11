@@ -1,0 +1,11 @@
+$kind: http-request
+url: "{{gatewayUrl}}/restaurants/{{restaurantId}}/availability"
+method: GET
+scripts:
+  - type: afterResponse
+    code: |-
+      pm.test('401 Unauthorized', () => pm.response.to.have.status(401));
+      const j = pm.response.json();
+      pm.test('shared error envelope', () => { pm.expect(j).to.have.property('status', 401); pm.expect(j).to.have.property('error'); });
+    language: text/javascript
+order: 1000

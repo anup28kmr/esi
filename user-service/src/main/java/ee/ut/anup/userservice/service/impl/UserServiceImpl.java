@@ -84,7 +84,7 @@ public class UserServiceImpl implements UserService {
                   return new InvalidCredentialsException("Invalid credentials");
                 });
 
-    String token = authService.generateToken(user.getEmail());
+    String token = authService.generateToken(user.getUserId(), user.getEmail(), user.getRole());
     log.info("Login succeeded for userId={}, email={}", user.getUserId(), user.getEmail());
     return new LoginResponseDTO(token, userMapper.toDto(user));
   }

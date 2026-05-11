@@ -7,7 +7,11 @@
       <li><RouterLink to="/">Home</RouterLink></li>
       <li><RouterLink to="/restaurants">Restaurants</RouterLink></li>
       <li v-if="authed"><RouterLink to="/profile">User Profile</RouterLink></li>
-      <li v-if="authed"><RouterLink to="/cart">Cart</RouterLink></li>
+      <li v-if="authed">
+        <RouterLink to="/cart">
+          Cart<span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+        </RouterLink>
+      </li>
       <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
       <li><RouterLink to="/notifications">Notifications</RouterLink></li>
     </ul>
@@ -26,22 +30,21 @@
 
 <script>
 import { RouterLink } from 'vue-router';
-import { authStateVersion, clearCurrentUser, clearToken, getCurrentUser, isAuthenticated, readClaims } from '../auth/token.js';
+import { clearCurrentUser, clearToken, getCurrentUser, isAuthenticated, readClaims } from '../auth/token.js';
+import { useCart } from '../composables/useCart.js';
 
 export default {
   name: 'AppNav',
   components: { RouterLink },
+  setup() {
+    const { itemCount } = useCart();
+    return { cartCount: itemCount };
+  },
   computed: {
     authed() {
-      // Touch the shared auth version ref so updates from login/logout become reactive.
-      // eslint-disable-next-line no-unused-expressions
-      authStateVersion.value;
       return isAuthenticated();
     },
     displayName() {
-      // Keep the label in sync when the current-user payload changes.
-      // eslint-disable-next-line no-unused-expressions
-      authStateVersion.value;
       const currentUser = getCurrentUser();
       if (currentUser) {
         return currentUser.fullName || currentUser.email || currentUser.userId || 'user';
@@ -105,5 +108,17 @@ export default {
   background: transparent;
   color: var(--qb-accent);
   padding: 0.25rem 0.5rem;
+}
+
+.cart-badge {
+  display: inline-block;
+  margin-left: 0.35rem;
+  background: var(--qb-accent);
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0.05rem 0.4rem;
+  vertical-align: top;
 }
 </style>
