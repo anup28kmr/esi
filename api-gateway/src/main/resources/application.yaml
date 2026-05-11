@@ -1,95 +1,21 @@
 spring:
   application:
     name: api-gateway
-  cloud:
-    gateway:
-      default-filters:
-        - DedupeResponseHeader=Access-Control-Allow-Credentials Access-Control-Allow-Origin
-      globalcors:
-        cors-configurations:
-          '[/**]':
-            allowed-origins: "*"
-            allowed-methods:
-              - GET
-              - POST
-              - PUT
-              - PATCH
-              - DELETE
-              - OPTIONS
-            allowed-headers: "*"
-            max-age: 3600
-      routes:
-        # User service - /api/auth/** (frontend calls /api/auth/login)
-        - id: user-service-api-auth-root
-          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
-          predicates:
-            - Path=/api/auth
-          filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
-        - id: user-service-api-auth
-          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
-          predicates:
-            - Path=/api/auth/**
-          filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
-        # User service - /api/users/** (frontend signup/login)
-        - id: user-service-api-users-root
-          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
-          predicates:
-            - Path=/api/users
-          filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
-        - id: user-service-api-users
-          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
-          predicates:
-            - Path=/api/users/**
-          filters:
-            - RewritePath=/api(?<segment>.*), $\{segment}
-        # User service - /auth/** (direct service calls)
-        - id: user-service-auth
-          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
-          predicates:
-            - Path=/auth/**
-        - id: user-service-users
-          uri: http://${USER_SERVICE_HOST:user-service}:${USER_SERVICE_PORT:7000}
-          predicates:
-            - Path=/users/**
-        # Order service
-        - id: order-service
-          uri: http://${ORDER_SERVICE_HOST:order-service}:${ORDER_SERVICE_PORT:7001}
-          predicates:
-            - Path=/orders/**
-        # Restaurant service
-        - id: restaurant-service
-          uri: http://${RESTAURANT_SERVICE_HOST:restaurant-service}:${RESTAURANT_SERVICE_PORT:8081}
-          predicates:
-            - Path=/restaurants/**
-        # Menu service
-        - id: menu-service
-          uri: http://${MENU_SERVICE_HOST:menu-service}:${MENU_SERVICE_PORT:8082}
-          predicates:
-            - Path=/menu-items/**
-        # Payment service
-        - id: payment-service
-          uri: http://${PAYMENT_SERVICE_HOST:payment-service}:${PAYMENT_SERVICE_PORT:8085}
-          predicates:
-            - Path=/payments/**
-        # Delivery service
-        - id: delivery-service
-          uri: http://${DELIVERY_SERVICE_HOST:delivery-service}:${DELIVERY_SERVICE_PORT:8086}
-          predicates:
-            - Path=/deliveries/**
-        # Notification service
-        - id: notification-service
-          uri: http://${NOTIFICATION_SERVICE_HOST:notification-service}:${NOTIFICATION_SERVICE_PORT:8087}
-          predicates:
-            - Path=/notifications/**
+
+# Routes are defined in GatewayRoutesConfig (Java DSL). The DSL is used
+# instead of YAML here because it gives us deterministic ordering between
+# more-specific and catch-all routes (e.g. /api/restaurants/{id}/menu-items
+# must hit menu-service before /api/restaurants/** sends it to restaurant-
+# service) and lets us inject service host/port via @Value.
+#
+# CORS is handled by CorsConfig (WebMvcConfigurer); leaving the gateway-
+# globalcors block in here would double-set headers on responses.
 
 logging:
   level:
     org.springframework.cloud.gateway: INFO
     org.springframework.web: INFO
-    org.springframework.web.servlet.mvc: DEBUG
+    org.springframework.web.servlet.mvc: INFO
     reactor.netty.http.client: INFO
     ee.ut.quickbite.apigateway: DEBUG
     ee.ut.quickbite.apigateway.config: DEBUG
