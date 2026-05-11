@@ -260,15 +260,14 @@ services:
   # in any environment with native x86_64 if you prefer.
   kafka:
     image: redpandadata/redpanda:v24.2.4
+    # No platform pinned: Docker pulls the manifest matching the host
+    # arch (arm64 on Apple Silicon, amd64 on Intel/Win/Linux). Pinning
+    # would force emulation on the wrong arch.
     command:
       - redpanda
       - start
+      - --mode=dev-container
       - --smp=1
-      - --memory=512M
-      - --reserve-memory=0M
-      - --overprovisioned
-      - --node-id=0
-      - --check=false
       - --kafka-addr=PLAINTEXT://0.0.0.0:9092
       - --advertise-kafka-addr=PLAINTEXT://kafka:9092
     ports:
@@ -277,8 +276,8 @@ services:
       test: ["CMD-SHELL", "rpk cluster info --brokers kafka:9092 >/dev/null 2>&1"]
       interval: 10s
       timeout: 5s
-      retries: 18
-      start_period: 20s
+      retries: 30
+      start_period: 30s
     networks: [quickbite-net]
 
   notification-db:
