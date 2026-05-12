@@ -1,5 +1,6 @@
 package ee.ut.anup.orderservice.service.impl;
 
+import ee.ut.anup.orderservice.client.UserClient;
 import ee.ut.anup.orderservice.dto.OrderLineRequest;
 import ee.ut.anup.orderservice.dto.OrderResponse;
 import ee.ut.anup.orderservice.dto.PlaceOrderRequest;
@@ -7,6 +8,7 @@ import ee.ut.anup.orderservice.dto.StatusUpdateRequest;
 import ee.ut.anup.orderservice.service.OrderService;
 import ee.ut.anup.orderservice.constants.OrderServiceConstants;
 import ee.ut.anup.orderservice.dto.OrderItemResponse;
+import ee.ut.anup.orderservice.dto.external.UserDTO;
 import ee.ut.anup.orderservice.entity.Order;
 import ee.ut.anup.orderservice.entity.OrderItem;
 import ee.ut.anup.orderservice.entity.User;
@@ -32,15 +34,19 @@ public class OrderServiceImpl implements OrderService {
     private final UserRepository userRepository;
     private final OrderMapper orderMapper;
     private final OrderItemMapper orderItemMapper;
+    private final UserClient userClient;
 
     @Override
     @Transactional
     public OrderResponse placeOrder(Long customerId, PlaceOrderRequest request) {
         User user = userRepository.findById(customerId)
                 .orElseGet(() -> {
+                    UserDTO externalUser = userClient.getUserById(customerId)
+                            .orElseThrow(() -> new ResourceNotFoundException("User not found in user-service with id: " + customerId));
                     User newUser = new User();
-                    newUser.setUserId(customerId);
-                    // In a real scenario, we might fetch user details from User Service
+                    newUser.setUserId(externalUser.userId());
+                    newUser.setEmail(externalUser.email());
+                    newUser.setFullName(externalUser.fullName());
                     return userRepository.save(newUser);
                 });
 
@@ -105,6 +111,13 @@ public class OrderServiceImpl implements OrderService {
     @Override
     public List<OrderResponse> getOrdersByCustomer(Long customerId) {
         return orderRepository.findByUser_UserId(customerId).stream()
+                .map(orderMapper::mapToResponse)
+                .collect(Collectors.toList());
+    }
+
+    @Override
+    public List<OrderResponse> getOrdersByRestaurant(String restaurantId) {
+        return orderRepository.findByRestaurantId(restaurantId).stream()
                 .map(orderMapper::mapToResponse)
                 .collect(Collectors.toList());
     }

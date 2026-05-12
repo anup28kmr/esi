@@ -55,9 +55,9 @@ public class AuthController {
                 authRequest.email(), authenticate.isAuthenticated());
 
         if (authenticate.isAuthenticated()) {
-            String token = authService.generateToken(authRequest.email());
-            log.info("Token generated for email={}", authRequest.email());
             UserDTO user = userService.getUserByEmail(authRequest.email());
+            String token = authService.generateToken(user.userId(), user.email(), user.role());
+            log.info("Token generated for userId={} email={}", user.userId(), user.email());
             return new LoginResponseDTO(token, user);
         } else {
             log.info("Login denied for email={}", authRequest.email());

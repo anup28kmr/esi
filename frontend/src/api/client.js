@@ -1,14 +1,14 @@
 import { getToken, clearToken } from '../auth/token.js';
 
-// `VITE_APP_API_BASE_URL` is baked at build time by Vite. An explicit
-// empty value means "same-origin" -- the nginx build serves
-// the UI and proxies `/api/**` to the gateway, so the browser should
-// skip CORS entirely by hitting its own origin. An unset variable
-// falls back to the dev gateway at :9090.
+// `VUE_APP_API_BASE_URL` is baked at build time by Vue CLI from
+// `.env.{production,development,local}`. The browser calls the API
+// Gateway directly (frontend -> api-gateway -> backend service);
+// there is no nginx reverse proxy in front of the gateway. Defaults to
+// the dev gateway at :9090 if unset.
 const rawBase = (typeof process !== 'undefined' && process.env)
-  ? process.env.VITE_APP_API_BASE_URL
+  ? process.env.VUE_APP_API_BASE_URL
   : undefined;
-const BASE_URL = (typeof rawBase === 'string') ? rawBase : 'http://localhost:9090';
+const BASE_URL = (typeof rawBase === 'string' && rawBase) ? rawBase : 'http://localhost:9090';
 
 console.log('[API Client] Module loaded');
 console.log('[API Client] rawBase:', rawBase);

@@ -84,14 +84,32 @@ public class OrderController {
         return ResponseEntity.ok(orderService.updateOrderStatus(id, request));
     }
 
-    @Operation(summary = "List customer orders", description = "List the orders of a given customer (order history).")
+    @Operation(
+            summary = "List orders",
+            description = "List orders by customer (customerId) or by restaurant (restaurantId). "
+                    + "Exactly one of customerId or restaurantId is required."
+    )
     @ApiResponses({
             @ApiResponse(responseCode = "200", description = "Orders listed",
-                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = OrderResponse.class))))
+                    content = @Content(array = @ArraySchema(schema = @Schema(implementation = OrderResponse.class)))),
+            @ApiResponse(responseCode = "400", description = "Neither or both filters supplied",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
     @GetMapping
-    public ResponseEntity<List<OrderResponse>> getOrdersByCustomer(@RequestParam Long customerId) {
-        return ResponseEntity.ok(orderService.getOrdersByCustomer(customerId));
+    public ResponseEntity<List<OrderResponse>> listOrders(
+            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) String restaurantId
+    ) {
+        boolean hasCustomer = customerId != null;
+        boolean hasRestaurant = restaurantId != null && !restaurantId.isBlank();
+        if (hasCustomer == hasRestaurant) {
+            throw new IllegalArgumentException(
+                    "Provide exactly one of `customerId` or `restaurantId`."
+            );
+        }
+        return ResponseEntity.ok(hasCustomer
+                ? orderService.getOrdersByCustomer(customerId)
+                : orderService.getOrdersByRestaurant(restaurantId));
     }
 
     @Operation(summary = "List order items", description = "List the items of a given order.")

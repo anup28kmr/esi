@@ -1,7 +1,9 @@
 package ee.ut.anup.orderservice.service.impl;
 
+import ee.ut.anup.orderservice.client.UserClient;
 import ee.ut.anup.orderservice.constants.OrderServiceConstants;
 import ee.ut.anup.orderservice.dto.*;
+import ee.ut.anup.orderservice.dto.external.UserDTO;
 import ee.ut.anup.orderservice.entity.Order;
 import ee.ut.anup.orderservice.entity.OrderItem;
 import ee.ut.anup.orderservice.entity.User;
@@ -40,6 +42,9 @@ class OrderServiceImplTest {
 
     @Mock
     private OrderItemMapper orderItemMapper;
+
+    @Mock
+    private UserClient userClient;
 
     @InjectMocks
     private OrderServiceImpl orderService;
@@ -84,17 +89,32 @@ class OrderServiceImplTest {
     @Test
     void placeOrder_NewUser_Success() {
         PlaceOrderRequest request = new PlaceOrderRequest("rest1", Collections.emptyList());
+        UserDTO externalUser = new UserDTO(1L, "test@example.com", "Test User");
         
         when(userRepository.findById(1L)).thenReturn(Optional.empty());
-        when(userRepository.save(any(User.class))).thenReturn(user);
+        when(userClient.getUserById(1L)).thenReturn(Optional.of(externalUser));
+        when(userRepository.save(any(User.class))).thenAnswer(invocation -> invocation.getArgument(0));
         when(orderRepository.save(any(Order.class))).thenReturn(order);
         when(orderMapper.mapToResponse(any(Order.class))).thenReturn(orderResponse);
 
         OrderResponse response = orderService.placeOrder(1L, request);
 
         assertNotNull(response);
+        verify(userClient).getUserById(1L);
         verify(userRepository).save(any(User.class));
         verify(orderRepository).save(any(Order.class));
+    }
+
+    @Test
+    void placeOrder_UserNotFoundInExternalService() {
+        PlaceOrderRequest request = new PlaceOrderRequest("rest1", Collections.emptyList());
+
+        when(userRepository.findById(1L)).thenReturn(Optional.empty());
+        when(userClient.getUserById(1L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class, () -> orderService.placeOrder(1L, request));
+        verify(userClient).getUserById(1L);
+        verify(userRepository, never()).save(any(User.class));
     }
 
     @Test

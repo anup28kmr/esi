@@ -25,6 +25,14 @@ spring:
 server:
   port: 7000
 
+# JWT signing config. The defaults match restaurant-service and menu-service so
+# tokens issued here validate downstream. In any non-dev environment override
+# JWT_SECRET (and JWT_ISSUER if you change it on the other services).
+jwt:
+  secret: ${JWT_SECRET:dGVzdC1zZWNyZXQtZm9yLWRldi1vbmx5LWRvLW5vdC11c2UtaW4tcHJvZC0xMjM0NTY=}
+  issuer: ${JWT_ISSUER:quickbite-user-service}
+  ttl: ${JWT_TTL:PT1H}
+
 springdoc:
   api-docs:
     path: /v3/api-docs

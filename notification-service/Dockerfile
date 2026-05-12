@@ -4,7 +4,7 @@
 # so teammates do not need to run `./mvnw package` on the host first —
 # `docker compose up --build` does the whole thing.
 
-# Build stage
+# Build stage -- uses Maven image with JDK 21 pre-installed.
 FROM maven:3.9-eclipse-temurin-21 AS build
 WORKDIR /workspace
 COPY pom.xml .
@@ -12,7 +12,7 @@ RUN mvn -B -DskipTests dependency:go-offline || true
 COPY src ./src
 RUN mvn -B -DskipTests package
 
-# Runtime stage
+# Runtime stage -- JRE plus curl for the compose healthcheck.
 FROM eclipse-temurin:21-jre
 RUN apt-get update \
  && apt-get install -y --no-install-recommends curl \
