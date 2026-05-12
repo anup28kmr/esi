@@ -1,9 +1,9 @@
 package ee.ut.anup.orderservice.controller;
 
 import ee.ut.anup.orderservice.dto.*;
+import ee.ut.anup.orderservice.security.AuthenticatedUser;
 import ee.ut.anup.orderservice.service.OrderService;
 import io.swagger.v3.oas.annotations.Operation;
-import io.swagger.v3.oas.annotations.Parameter;
 import io.swagger.v3.oas.annotations.media.ArraySchema;
 import io.swagger.v3.oas.annotations.media.Content;
 import io.swagger.v3.oas.annotations.media.Schema;
@@ -11,16 +11,20 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import lombok.AllArgsConstructor;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/orders")
 @Tag(name = "Orders", description = "Order management API")
 @AllArgsConstructor
+@Slf4j
 public class OrderController {
 
     private final OrderService orderService;
@@ -37,11 +41,17 @@ public class OrderController {
     })
     @PostMapping
     public ResponseEntity<?> placeOrder(
-            @Parameter(description = "Authenticated customer id from User Service", required = true)
-            @RequestHeader("X-User-Id") Long customerId,
+            @AuthenticationPrincipal AuthenticatedUser principal,
             @RequestBody PlaceOrderRequest request
     ) {
-        return ResponseEntity.status(HttpStatus.CREATED).body(orderService.placeOrder(customerId, request));
+        UUID customerId = principal.userId();
+        int lineCount = request.items() == null ? 0 : request.items().size();
+        log.info("POST /orders customerId={} restaurantId={} lines={}",
+                customerId, request.restaurantId(), lineCount);
+        OrderResponse response = orderService.placeOrder(customerId, request);
+        log.info("order placed orderId={} customerId={} total={}",
+                response.orderId(), customerId, response.totalAmount());
+        return ResponseEntity.status(HttpStatus.CREATED).body(response);
     }
 
     @Operation(summary = "Get order by id", description = "Get details and current status of an order.")
@@ -53,6 +63,7 @@ public class OrderController {
     })
     @GetMapping("/{id}")
     public ResponseEntity<OrderResponse> getOrder(@PathVariable Long id) {
+        log.debug("GET /orders/{}", id);
         return ResponseEntity.ok(orderService.getOrder(id));
     }
 
@@ -66,6 +77,7 @@ public class OrderController {
     })
     @DeleteMapping("/{id}")
     public ResponseEntity<Void> cancelOrder(@PathVariable Long id) {
+        log.info("DELETE /orders/{}", id);
         orderService.cancelOrder(id);
         return ResponseEntity.noContent().build();
     }
@@ -81,6 +93,7 @@ public class OrderController {
     })
     @PatchMapping("/{id}/status")
     public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable Long id, @RequestBody StatusUpdateRequest request) {
+        log.info("PATCH /orders/{}/status status='{}'", id, request.status());
         return ResponseEntity.ok(orderService.updateOrderStatus(id, request));
     }
 
@@ -97,16 +110,21 @@ public class OrderController {
     })
     @GetMapping
     public ResponseEntity<List<OrderResponse>> listOrders(
-            @RequestParam(required = false) Long customerId,
+            @RequestParam(required = false) UUID customerId,
             @RequestParam(required = false) String restaurantId
     ) {
         boolean hasCustomer = customerId != null;
         boolean hasRestaurant = restaurantId != null && !restaurantId.isBlank();
         if (hasCustomer == hasRestaurant) {
+            log.warn("GET /orders rejected: customerId={} restaurantId={} (exactly one required)",
+                    customerId, restaurantId);
             throw new IllegalArgumentException(
                     "Provide exactly one of `customerId` or `restaurantId`."
             );
         }
+        log.debug("GET /orders filter={} value={}",
+                hasCustomer ? "customerId" : "restaurantId",
+                hasCustomer ? customerId : restaurantId);
         return ResponseEntity.ok(hasCustomer
                 ? orderService.getOrdersByCustomer(customerId)
                 : orderService.getOrdersByRestaurant(restaurantId));
@@ -121,6 +139,7 @@ public class OrderController {
     })
     @GetMapping("/{id}/items")
     public ResponseEntity<List<OrderItemResponse>> getOrderItems(@PathVariable Long id) {
+        log.debug("GET /orders/{}/items", id);
         return ResponseEntity.ok(orderService.getOrderItems(id));
     }
 }

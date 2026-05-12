@@ -1,9 +1,12 @@
 package ee.ut.anup.userservice.service;
 
 import ee.ut.anup.userservice.entity.User.Role;
+import io.jsonwebtoken.Claims;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.stereotype.Service;
+
+import java.util.UUID;
 
 @Service
 @AllArgsConstructor
@@ -12,16 +15,20 @@ public class AuthService {
 
     private final JwtService jwtService;
 
-    public String generateToken(Long userId, String email, Role role) {
+    public String generateToken(UUID userId, String email, Role role) {
         log.info("Generating JWT for userId={} email={}", userId, email);
         String token = jwtService.generateToken(userId, email, role);
         log.info("JWT generated successfully for userId={}", userId);
         return token;
     }
 
-    public void validateToken(String token) {
-        log.info("Token validation requested");
-        jwtService.validateToken(token);
-        log.info("Token validation completed successfully");
+    /**
+     * Verifies signature, issuer, and expiration; returns the decoded claims.
+     * Throws JwtException (or subclass like ExpiredJwtException) on any failure
+     * so callers can map to 401 in their exception handler.
+     */
+    public Claims parseAndValidateToken(String token) {
+        log.debug("parsing JWT for introspection");
+        return jwtService.parseAndValidate(token);
     }
 }

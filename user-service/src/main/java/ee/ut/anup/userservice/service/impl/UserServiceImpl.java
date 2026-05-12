@@ -22,6 +22,7 @@ import ee.ut.anup.userservice.service.AuthService;
 import ee.ut.anup.userservice.service.UserService;
 import java.util.List;
 import java.util.Optional;
+import java.util.UUID;
 import java.util.stream.Collectors;
 import lombok.RequiredArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
@@ -90,7 +91,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public UserDTO getUserProfile(Long userId) {
+  public UserDTO getUserProfile(UUID userId) {
     log.info("Fetching user profile, userId={}", userId);
     User user =
         userRepository
@@ -121,7 +122,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
-  public UserDTO updateUserProfile(Long userId, UpdateUserDTO userDTO) {
+  public UserDTO updateUserProfile(UUID userId, UpdateUserDTO userDTO) {
     log.info("Updating user profile, userId={}", userId);
 
     User user =
@@ -143,7 +144,7 @@ public class UserServiceImpl implements UserService {
   }
 
   @Override
-  public List<AddressDTO> getUserAddresses(Long userId) {
+  public List<AddressDTO> getUserAddresses(UUID userId) {
     log.info("Fetching addresses for userId={}", userId);
     List<AddressDTO> addresses =
         addressRepository.findByUserUserId(userId).stream()
@@ -155,7 +156,7 @@ public class UserServiceImpl implements UserService {
 
   @Override
   @Transactional
-  public AddressDTO addUserAddress(Long userId, AddressDTO addressDTO) {
+  public AddressDTO addUserAddress(UUID userId, AddressDTO addressDTO) {
     log.info("Adding address for userId={}", userId);
 
     User user =

@@ -74,10 +74,39 @@ export default {
         this.$router.push(next);
       } catch (err) {
         console.error('[LoginView] Login error:', err);
-        this.error = err instanceof ApiError ? err.message : 'Sign-in failed.';
+        this.error = this.describeLoginError(err);
       } finally {
         this.submitting = false;
       }
+    },
+    describeLoginError(err) {
+      if (!(err instanceof ApiError)) {
+        return 'Sign-in failed. Please try again.';
+      }
+      const invalidCreds = 'Invalid email or password. Please check your credentials and try again.';
+      // Single message for both "no such user" and "wrong password" so we
+      // don't leak which emails are registered.
+      if (err.status === 401 || err.status === 403 || err.status === 404) {
+        return invalidCreds;
+      }
+      // The user-service currently lets Spring Security's AuthenticationException
+      // fall through to the catch-all 500 handler, so bad credentials arrive as a
+      // 500 with a body like {"message":"Bad credentials"}. Pattern-match the
+      // body so the user still sees the right thing.
+      const bodyMessage =
+        (err.body && typeof err.body === 'object' && (err.body.message || err.body.error)) ||
+        err.message ||
+        '';
+      if (/bad credentials|invalid access|invalid credentials|user.*not found|no such user/i.test(bodyMessage)) {
+        return invalidCreds;
+      }
+      if (err.status === 0) {
+        return 'Cannot reach the server. Please check your connection and try again.';
+      }
+      if (err.status >= 500) {
+        return 'The sign-in service is temporarily unavailable. Please try again in a moment.';
+      }
+      return bodyMessage || 'Sign-in failed. Please try again.';
     }
   }
 };

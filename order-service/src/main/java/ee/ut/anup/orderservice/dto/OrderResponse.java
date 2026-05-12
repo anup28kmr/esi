@@ -2,10 +2,11 @@ package ee.ut.anup.orderservice.dto;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 public record OrderResponse(
     Long orderId,
-    Long customerId,
+    UUID customerId,
     String restaurantId,
     String status,
     BigDecimal totalAmount,

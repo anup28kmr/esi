@@ -1,7 +1,9 @@
 package ee.ut.anup.userservice.dto;
 
+import java.util.UUID;
+
 public record DriverProfileDTO(
-        Long userId,
+        UUID userId,
         String vehicleType,
         String licenseNumber,
         boolean available) {

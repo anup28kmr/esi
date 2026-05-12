@@ -84,6 +84,8 @@ public class MenuService {
         MenuItem saved = menuItems.save(new MenuItem(
             restaurantId, req.name(), req.description(), price, req.category(), available
         ));
+        log.info("menu item persisted menuItemId={} restaurantId={} price={} {} available={}",
+            saved.getMenuItemId(), restaurantId, price.getAmount(), price.getCurrency(), available);
         return MenuItemResponse.from(saved);
     }
 
@@ -136,6 +138,7 @@ public class MenuService {
         MenuItem m = requireMenuItem(id);
         requireOwnerOrAdmin(m.getRestaurantId(), "DELETE /menu-items/" + id);
         menuItems.delete(m);
+        log.info("menu item deleted menuItemId={} restaurantId={}", id, m.getRestaurantId());
     }
 
     private void requireOwnerOrAdmin(UUID restaurantId, String endpoint) {
@@ -175,11 +178,14 @@ public class MenuService {
         Map<UUID, MenuItem> byId = menuItems.findAllByMenuItemIdIn(ids).stream()
             .collect(Collectors.toMap(MenuItem::getMenuItemId, m -> m, (a, b) -> a, LinkedHashMap::new));
 
+        log.debug("validate lookup requestedIds={} foundIds={}", ids.size(), byId.size());
+
         Set<String> distinctCurrencies = byId.values().stream()
             .map(m -> m.getPrice().getCurrency())
             .filter(Objects::nonNull)
             .collect(Collectors.toCollection(LinkedHashSet::new));
         if (distinctCurrencies.size() > 1) {
+            log.warn("validate rejected mixed currencies={} requestedIds={}", distinctCurrencies, ids);
             throw new MixedCurrencyException(distinctCurrencies);
         }
 

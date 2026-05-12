@@ -6,13 +6,14 @@ import ee.ut.anup.orderservice.dto.PlaceOrderRequest;
 import ee.ut.anup.orderservice.dto.StatusUpdateRequest;
 
 import java.util.List;
+import java.util.UUID;
 
 public interface OrderService {
-    OrderResponse placeOrder(Long customerId, PlaceOrderRequest request);
+    OrderResponse placeOrder(UUID customerId, PlaceOrderRequest request);
     OrderResponse getOrder(Long id);
     void cancelOrder(Long id);
     OrderResponse updateOrderStatus(Long id, StatusUpdateRequest request);
-    List<OrderResponse> getOrdersByCustomer(Long customerId);
+    List<OrderResponse> getOrdersByCustomer(UUID customerId);
     List<OrderResponse> getOrdersByRestaurant(String restaurantId);
     List<OrderItemResponse> getOrderItems(Long id);
 }

@@ -2,6 +2,7 @@ package ee.ut.anup.userservice.service;
 
 import ee.ut.anup.userservice.config.JwtProperties;
 import ee.ut.anup.userservice.entity.User.Role;
+import io.jsonwebtoken.Claims;
 import io.jsonwebtoken.Jwts;
 import io.jsonwebtoken.SignatureAlgorithm;
 import io.jsonwebtoken.io.Decoders;
@@ -36,18 +37,11 @@ public class JwtService {
         this.signingKey = Keys.hmacShaKeyFor(Decoders.BASE64.decode(jwt.secret()));
     }
 
-    public String generateToken(Long userId, String email, Role role) {
+    public String generateToken(UUID userId, String email, Role role) {
         log.info("Issuing JWT for userId={} role={} email={}", userId, role, email);
 
-        // The other services parse `userId` via UUID.fromString(...) but our
-        // schema uses Long ids. Synthesize a deterministic UUID from the Long
-        // (00000000-0000-0000-0000-00000000000N), which matches the convention
-        // already used in restaurant-service seed data (e.g. ownerId
-        // 00000000-0000-0000-0000-000000000002 for userId=2).
-        UUID userIdUuid = new UUID(0L, userId);
-
         Map<String, Object> claims = new HashMap<>();
-        claims.put("userId", userIdUuid.toString());
+        claims.put("userId", userId.toString());
         claims.put("role", toClaimRole(role));
         claims.put("tokenType", "USER");
 
@@ -79,12 +73,19 @@ public class JwtService {
     }
 
     public void validateToken(final String token) {
-        log.info("Validating JWT");
-        Jwts.parserBuilder()
+        parseAndValidate(token);
+    }
+
+    /**
+     * Verifies signature + issuer + expiration, returning the decoded claims.
+     * Any failure throws JwtException so callers can map to 401.
+     */
+    public Claims parseAndValidate(final String token) {
+        return Jwts.parserBuilder()
             .setSigningKey(signingKey)
             .requireIssuer(jwt.issuer())
             .build()
-            .parseClaimsJws(token);
-        log.info("JWT validation successful");
+            .parseClaimsJws(token)
+            .getBody();
     }
 }

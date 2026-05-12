@@ -12,6 +12,10 @@ import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
 import org.springframework.http.ResponseEntity;
+import io.jsonwebtoken.JwtException;
+import org.springframework.security.authentication.BadCredentialsException;
+import org.springframework.security.core.AuthenticationException;
+import org.springframework.security.core.userdetails.UsernameNotFoundException;
 import org.springframework.validation.FieldError;
 import org.springframework.validation.ObjectError;
 import org.springframework.web.bind.MethodArgumentNotValidException;
@@ -69,6 +73,54 @@ public class GlobalExceptionHandler extends ResponseEntityExceptionHandler {
                 path,
                 HttpStatus.UNAUTHORIZED,
                 exception.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    // Spring Security's BadCredentialsException (wrong password) and
+    // UsernameNotFoundException (no such user) both indicate a failed login.
+    // We return the same message for both so we don't leak which emails are
+    // registered (account-enumeration prevention).
+    @ExceptionHandler({BadCredentialsException.class, UsernameNotFoundException.class})
+    public ResponseEntity<ErrorResponseDTO> handleBadCredentials(AuthenticationException exception,
+                                                                 WebRequest webRequest) {
+        String path = webRequest.getDescription(false).replace("uri=", "");
+        log.warn("Login failed at path={} reason={}", path, exception.getClass().getSimpleName());
+
+        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
+                path,
+                HttpStatus.UNAUTHORIZED,
+                "Wrong username or password",
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(JwtException.class)
+    public ResponseEntity<ErrorResponseDTO> handleJwt(JwtException exception, WebRequest webRequest) {
+        String path = webRequest.getDescription(false).replace("uri=", "");
+        log.warn("JWT failure at path={} reason={}", path, exception.getMessage());
+        ErrorResponseDTO body = new ErrorResponseDTO(
+                path,
+                HttpStatus.UNAUTHORIZED,
+                "Invalid or expired token",
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(body, HttpStatus.UNAUTHORIZED);
+    }
+
+    @ExceptionHandler(AuthenticationException.class)
+    public ResponseEntity<ErrorResponseDTO> handleAuthentication(AuthenticationException exception,
+                                                                 WebRequest webRequest) {
+        String path = webRequest.getDescription(false).replace("uri=", "");
+        log.warn("Authentication failure at path={} type={} message={}",
+                path, exception.getClass().getSimpleName(), exception.getMessage());
+
+        ErrorResponseDTO errorResponse = new ErrorResponseDTO(
+                path,
+                HttpStatus.UNAUTHORIZED,
+                "Authentication failed",
                 LocalDateTime.now()
         );
         return new ResponseEntity<>(errorResponse, HttpStatus.UNAUTHORIZED);

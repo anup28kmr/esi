@@ -22,6 +22,7 @@ import ee.ut.anup.userservice.exception.UserAlreadyExistsException;
 import ee.ut.anup.userservice.service.UserService;
 import java.util.List;
 import java.util.Map;
+import java.util.UUID;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
@@ -35,6 +36,14 @@ import org.springframework.web.client.RestTemplate;
 
 @ExtendWith(MockitoExtension.class)
 class UserControllerTest {
+
+    // Stable UUIDs per persona so test failures are easy to trace.
+    private static final UUID CREATED_USER_ID = UUID.fromString("00000000-0000-0000-0000-000000000001");
+    private static final UUID AMY_ID          = UUID.fromString("0000000a-0000-0000-0000-000000000011");
+    private static final UUID GHOST_ID        = UUID.fromString("00000099-0000-0000-0000-000000000099");
+    private static final UUID MIA_ID          = UUID.fromString("00000008-0000-0000-0000-000000000008");
+    private static final UUID ADDR_USER_ID    = UUID.fromString("00000005-0000-0000-0000-000000000005");
+    private static final UUID ADD_ADDR_USER_ID = UUID.fromString("00000003-0000-0000-0000-000000000003");
 
     private MockMvc mockMvc;
     private ObjectMapper objectMapper;
@@ -93,7 +102,7 @@ class UserControllerTest {
                 "john@example.com", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, null, null);
         UserDTO response = new UserDTO(
-                1L,
+                CREATED_USER_ID,
                 "john@example.com", "secret123", "John Doe", "+3720000000",
                 User.Role.CUSTOMER, User.Status.ACTIVE, null);
         when(userService.registerUser(eq(request))).thenReturn(response);
@@ -173,12 +182,12 @@ class UserControllerTest {
     @Test
     void getUserProfile_shouldReturnUser() throws Exception {
         UserDTO response = new UserDTO(
-                11L,
+                AMY_ID,
                 "amy@example.com", "pwd", "Amy", "+372111111",
                 User.Role.DRIVER, User.Status.ACTIVE, null);
-        when(userService.getUserProfile(11L)).thenReturn(response);
+        when(userService.getUserProfile(AMY_ID)).thenReturn(response);
 
-        mockMvc.perform(get("/users/{id}", 11L))
+        mockMvc.perform(get("/users/{id}", AMY_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$.email").value("amy@example.com"))
                 .andExpect(jsonPath("$.fullName").value("Amy"))
@@ -188,12 +197,12 @@ class UserControllerTest {
 
     @Test
     void getUserProfile_shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
-        when(userService.getUserProfile(99L))
-                .thenThrow(new ResourceNotFoundException("User not found with id: 99"));
+        when(userService.getUserProfile(GHOST_ID))
+                .thenThrow(new ResourceNotFoundException("User not found with id: " + GHOST_ID));
 
-        mockMvc.perform(get("/users/{id}", 99L))
+        mockMvc.perform(get("/users/{id}", GHOST_ID))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorMessage").value("User not found with id: 99"));
+                .andExpect(jsonPath("$.errorMessage").value("User not found with id: " + GHOST_ID));
     }
 
     // ---- updateUserProfile ----
@@ -201,15 +210,15 @@ class UserControllerTest {
     @Test
     void updateUserProfile_shouldReturnUpdatedUser() throws Exception {
         UpdateUserDTO request = new UpdateUserDTO(
-                8L, "mia@example.com", "newpass", "Mia Updated", "+372222222",
+                MIA_ID, "mia@example.com", "newpass", "Mia Updated", "+372222222",
                 User.Role.CUSTOMER, null, null);
         UserDTO response = new UserDTO(
-                8L,
+                MIA_ID,
                 "mia@example.com", "newpass", "Mia Updated", "+372222222",
                 User.Role.CUSTOMER, User.Status.ACTIVE, null);
-        when(userService.updateUserProfile(8L, request)).thenReturn(response);
+        when(userService.updateUserProfile(MIA_ID, request)).thenReturn(response);
 
-        mockMvc.perform(put("/users/{id}", 8L)
+        mockMvc.perform(put("/users/{id}", MIA_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isOk())
@@ -217,16 +226,16 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.fullName").value("Mia Updated"))
                 .andExpect(jsonPath("$.status").value("ACTIVE"));
 
-        verify(userService).updateUserProfile(8L, request);
+        verify(userService).updateUserProfile(MIA_ID, request);
     }
 
     @Test
     void updateUserProfile_shouldReturnBadRequest_whenEmailInvalid() throws Exception {
         UpdateUserDTO invalidRequest = new UpdateUserDTO(
-                8L, "not-an-email", "newpass", "Mia", "+372222222",
+                MIA_ID, "not-an-email", "newpass", "Mia", "+372222222",
                 User.Role.CUSTOMER, null, null);
 
-        mockMvc.perform(put("/users/{id}", 8L)
+        mockMvc.perform(put("/users/{id}", MIA_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -236,16 +245,16 @@ class UserControllerTest {
     @Test
     void updateUserProfile_shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
         UpdateUserDTO request = new UpdateUserDTO(
-                99L, "ghost@example.com", "pass", "Ghost", "+000",
+                GHOST_ID, "ghost@example.com", "pass", "Ghost", "+000",
                 User.Role.CUSTOMER, null, null);
-        when(userService.updateUserProfile(99L, request))
-                .thenThrow(new ResourceNotFoundException("User not found with id: 99"));
+        when(userService.updateUserProfile(GHOST_ID, request))
+                .thenThrow(new ResourceNotFoundException("User not found with id: " + GHOST_ID));
 
-        mockMvc.perform(put("/users/{id}", 99L)
+        mockMvc.perform(put("/users/{id}", GHOST_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorMessage").value("User not found with id: 99"));
+                .andExpect(jsonPath("$.errorMessage").value("User not found with id: " + GHOST_ID));
     }
 
     // ---- getUserAddresses ----
@@ -255,9 +264,9 @@ class UserControllerTest {
         List<AddressDTO> addresses = List.of(
                 new AddressDTO("Street 1", "Tartu", "50001", "Home", true),
                 new AddressDTO("Street 2", "Tallinn", "10111", "Work", false));
-        when(userService.getUserAddresses(5L)).thenReturn(addresses);
+        when(userService.getUserAddresses(ADDR_USER_ID)).thenReturn(addresses);
 
-        mockMvc.perform(get("/users/{id}/addresses", 5L))
+        mockMvc.perform(get("/users/{id}/addresses", ADDR_USER_ID))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].street").value("Street 1"))
                 .andExpect(jsonPath("$[0].city").value("Tartu"))
@@ -268,12 +277,12 @@ class UserControllerTest {
 
     @Test
     void getUserAddresses_shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
-        when(userService.getUserAddresses(99L))
-                .thenThrow(new ResourceNotFoundException("User not found with id: 99"));
+        when(userService.getUserAddresses(GHOST_ID))
+                .thenThrow(new ResourceNotFoundException("User not found with id: " + GHOST_ID));
 
-        mockMvc.perform(get("/users/{id}/addresses", 99L))
+        mockMvc.perform(get("/users/{id}/addresses", GHOST_ID))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorMessage").value("User not found with id: 99"));
+                .andExpect(jsonPath("$.errorMessage").value("User not found with id: " + GHOST_ID));
     }
 
     // ---- addUserAddress ----
@@ -282,9 +291,9 @@ class UserControllerTest {
     void addUserAddress_shouldReturnCreatedAddress() throws Exception {
         AddressDTO request = new AddressDTO("Narva mnt 1", "Tartu", "51009", "Dorm", true);
         AddressDTO response = new AddressDTO("Narva mnt 1", "Tartu", "51009", "Dorm", true);
-        when(userService.addUserAddress(3L, request)).thenReturn(response);
+        when(userService.addUserAddress(ADD_ADDR_USER_ID, request)).thenReturn(response);
 
-        mockMvc.perform(post("/users/{id}/addresses", 3L)
+        mockMvc.perform(post("/users/{id}/addresses", ADD_ADDR_USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -294,14 +303,14 @@ class UserControllerTest {
                 .andExpect(jsonPath("$.label").value("Dorm"))
                 .andExpect(jsonPath("$.isDefault").value(true));
 
-        verify(userService).addUserAddress(3L, request);
+        verify(userService).addUserAddress(ADD_ADDR_USER_ID, request);
     }
 
     @Test
     void addUserAddress_shouldReturnBadRequest_whenStreetMissing() throws Exception {
         AddressDTO invalidRequest = new AddressDTO("", "Tartu", "51009", "Dorm", true);
 
-        mockMvc.perform(post("/users/{id}/addresses", 3L)
+        mockMvc.perform(post("/users/{id}/addresses", ADD_ADDR_USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -312,7 +321,7 @@ class UserControllerTest {
     void addUserAddress_shouldReturnBadRequest_whenCityMissing() throws Exception {
         AddressDTO invalidRequest = new AddressDTO("Narva mnt 1", "", "51009", "Dorm", false);
 
-        mockMvc.perform(post("/users/{id}/addresses", 3L)
+        mockMvc.perform(post("/users/{id}/addresses", ADD_ADDR_USER_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(invalidRequest)))
                 .andExpect(status().isBadRequest())
@@ -322,13 +331,13 @@ class UserControllerTest {
     @Test
     void addUserAddress_shouldReturnNotFound_whenUserDoesNotExist() throws Exception {
         AddressDTO request = new AddressDTO("Narva mnt 1", "Tartu", "51009", "Dorm", false);
-        when(userService.addUserAddress(99L, request))
-                .thenThrow(new ResourceNotFoundException("User not found with id: 99"));
+        when(userService.addUserAddress(GHOST_ID, request))
+                .thenThrow(new ResourceNotFoundException("User not found with id: " + GHOST_ID));
 
-        mockMvc.perform(post("/users/{id}/addresses", 99L)
+        mockMvc.perform(post("/users/{id}/addresses", GHOST_ID)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isNotFound())
-                .andExpect(jsonPath("$.errorMessage").value("User not found with id: 99"));
+                .andExpect(jsonPath("$.errorMessage").value("User not found with id: " + GHOST_ID));
     }
 }
