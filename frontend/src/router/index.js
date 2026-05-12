@@ -14,6 +14,7 @@ import CartView from '../views/CartView.vue';
 import OrderStatusView from '../views/OrderStatusView.vue';
 import NotificationsView from '../views/NotificationsView.vue';
 import UserView from '../views/UserView.vue';
+import DeliveriesView from '../views/DeliveriesView.vue';
 import NotFoundView from '../views/NotFoundView.vue';
 
 /**
@@ -77,6 +78,11 @@ const routes = [
     path: '/notifications',
     name: 'notifications',
     component: NotificationsView
+  },
+  {
+    path: '/deliveries',
+    name: 'deliveries',
+    component: DeliveriesView
   },
   {
     path: '/profile',
