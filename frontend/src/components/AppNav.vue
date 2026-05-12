@@ -14,6 +14,7 @@
       </li>
       <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
       <li><RouterLink to="/notifications">Notifications</RouterLink></li>
+      <li><RouterLink to="/deliveries">Deliveries</RouterLink></li>
     </ul>
     <div class="auth">
       <template v-if="authed">
