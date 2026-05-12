@@ -21,6 +21,9 @@ spring:
 server:
   port: 7001
 
+user-service:
+  url: ${USER_SERVICE_URL:http://localhost:7000}
+
 springdoc:
   api-docs:
     path: /v3/api-docs
