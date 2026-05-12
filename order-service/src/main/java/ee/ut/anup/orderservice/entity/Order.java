@@ -4,7 +4,6 @@ import jakarta.persistence.Entity;
 import jakarta.persistence.GeneratedValue;
 import jakarta.persistence.GenerationType;
 import jakarta.persistence.Id;
-import jakarta.persistence.ManyToOne;
 import jakarta.persistence.OneToMany;
 import jakarta.persistence.Table;
 import lombok.Getter;
@@ -12,6 +11,7 @@ import lombok.Setter;
 
 import java.math.BigDecimal;
 import java.util.List;
+import java.util.UUID;
 
 @Getter
 @Setter
@@ -21,8 +21,9 @@ public class Order extends BaseEntity {
     @Id
     @GeneratedValue(strategy = GenerationType.IDENTITY)
     private Long orderId;
-    @ManyToOne
-    private User user; // Customer who placed the order
+    // Customer who placed the order. UUID-typed since user-service migrated
+    // off Long ids; the value lives in the JWT's userId claim verbatim.
+    private UUID userId;
     private String restaurantId;
     private String status;
     private BigDecimal totalAmount;

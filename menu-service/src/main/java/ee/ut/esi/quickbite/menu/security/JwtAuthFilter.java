@@ -9,6 +9,8 @@ import jakarta.servlet.FilterChain;
 import jakarta.servlet.ServletException;
 import jakarta.servlet.http.HttpServletRequest;
 import jakarta.servlet.http.HttpServletResponse;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.HttpHeaders;
 import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
 import org.springframework.security.core.authority.SimpleGrantedAuthority;
@@ -24,6 +26,7 @@ import java.util.UUID;
 @Component
 public class JwtAuthFilter extends OncePerRequestFilter {
 
+    private static final Logger log = LoggerFactory.getLogger(JwtAuthFilter.class);
     private static final String BEARER_PREFIX = "Bearer ";
 
     private final JwtProperties jwt;
@@ -68,6 +71,8 @@ public class JwtAuthFilter extends OncePerRequestFilter {
                 principal, null, List.of(new SimpleGrantedAuthority("ROLE_" + role))
             );
             SecurityContextHolder.getContext().setAuthentication(authentication);
+            log.debug("jwt accepted userId={} role={} tokenType={} path={}",
+                userId, role, tokenType, request.getRequestURI());
         } catch (JwtException | IllegalArgumentException ex) {
             // Token is unrecognized (bad signature, missing claims, wrong issuer,
             // user-id not a UUID, etc.). Don't reject outright -- clear any partial
@@ -76,6 +81,7 @@ public class JwtAuthFilter extends OncePerRequestFilter {
             // doesn't get logged out when it browses a public page with a token
             // that this service can't interpret. Protected endpoints return 401
             // via RestAuthEntryPoints.unauthorizedEntryPoint().
+            log.debug("jwt unrecognized path={} reason={}", request.getRequestURI(), ex.getMessage());
             SecurityContextHolder.clearContext();
         }
         chain.doFilter(request, response);

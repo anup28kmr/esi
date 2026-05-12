@@ -12,6 +12,8 @@ import io.swagger.v3.oas.annotations.responses.ApiResponse;
 import io.swagger.v3.oas.annotations.responses.ApiResponses;
 import io.swagger.v3.oas.annotations.tags.Tag;
 import jakarta.validation.Valid;
+import org.slf4j.Logger;
+import org.slf4j.LoggerFactory;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.DeleteMapping;
 import org.springframework.web.bind.annotation.GetMapping;
@@ -31,6 +33,8 @@ import java.util.UUID;
 @Tag(name = "Menu items", description = "Menu items and batch validation for order placement")
 public class MenuController {
 
+    private static final Logger log = LoggerFactory.getLogger(MenuController.class);
+
     private final MenuService service;
 
     public MenuController(MenuService service) {
@@ -48,10 +52,14 @@ public class MenuController {
         @Valid @RequestBody CreateMenuItemRequest request,
         UriComponentsBuilder uriBuilder
     ) {
+        log.info("POST /restaurants/{}/menu-items name='{}' category='{}'",
+            restaurantId, request.name(), request.category());
         MenuItemResponse created = service.create(restaurantId, request);
         URI location = uriBuilder.path("/menu-items/{id}")
             .buildAndExpand(created.menuItemId())
             .toUri();
+        log.info("menu item created menuItemId={} restaurantId={}",
+            created.menuItemId(), restaurantId);
         return ResponseEntity.created(location).body(created);
     }
 
@@ -63,7 +71,11 @@ public class MenuController {
         @RequestParam(required = false) String category,
         @RequestParam(required = false) Boolean available
     ) {
-        return service.listForRestaurant(restaurantId, category, available);
+        log.debug("GET /restaurants/{}/menu-items category={} available={}",
+            restaurantId, category, available);
+        List<MenuItemResponse> items = service.listForRestaurant(restaurantId, category, available);
+        log.debug("list returned {} menu items for restaurantId={}", items.size(), restaurantId);
+        return items;
     }
 
     @GetMapping("/menu-items/{id}")
@@ -73,6 +85,7 @@ public class MenuController {
         @ApiResponse(responseCode = "404", description = "Not found", content = @Content)
     })
     public MenuItemResponse get(@PathVariable UUID id) {
+        log.debug("GET /menu-items/{}", id);
         return service.findById(id);
     }
 
@@ -87,6 +100,8 @@ public class MenuController {
         @PathVariable UUID id,
         @Valid @RequestBody UpdateMenuItemRequest request
     ) {
+        log.info("PUT /menu-items/{} name='{}' category='{}' available={}",
+            id, request.name(), request.category(), request.isAvailable());
         return service.update(id, request);
     }
 
@@ -97,6 +112,7 @@ public class MenuController {
         @ApiResponse(responseCode = "404", description = "Not found", content = @Content)
     })
     public ResponseEntity<Void> delete(@PathVariable UUID id) {
+        log.info("DELETE /menu-items/{}", id);
         service.delete(id);
         return ResponseEntity.noContent().build();
     }
@@ -108,6 +124,11 @@ public class MenuController {
         @ApiResponse(responseCode = "400", description = "Validation failed", content = @Content)
     })
     public ValidateMenuItemsResponse validate(@Valid @RequestBody ValidateMenuItemsRequest request) {
-        return service.validate(request);
+        int itemCount = request.items() == null ? 0 : request.items().size();
+        log.info("POST /menu-items/validate itemCount={}", itemCount);
+        ValidateMenuItemsResponse response = service.validate(request);
+        log.info("validate result allValid={} totalAmount={} {}",
+            response.allValid(), response.totalAmount(), response.currency());
+        return response;
     }
 }

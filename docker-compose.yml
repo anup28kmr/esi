@@ -61,17 +61,25 @@ services:
   order-service:
     build: ./order-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
       DB_HOST: postgres-order
       DB_PORT: 5432
       DB_NAME: order_service
       DB_USERNAME: postgres
       DB_PASSWORD: password
+      # Compose-network hostname for user-service. Inside the container,
+      # `localhost` would resolve to the order-service container itself,
+      # so the UserClient default of http://localhost:7000 fails with an
+      # I/O error. Use the service name on the quickbite-net bridge.
+      USER_SERVICE_URL: http://user-service:7000
     ports:
       - "7001:7001"
     depends_on:
       postgres-order:
         condition: service_healthy
+      user-service:
+        condition: service_started
     networks: [quickbite-net]
 
   # ─── api-gateway ──────────────────────────────────────────────────────────
@@ -107,7 +115,7 @@ services:
 
   # ─── restaurant-service stack ─────────────────────────────────────────────
   restaurant-db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_DB: restaurant_db
       POSTGRES_USER: restaurant_user
@@ -126,7 +134,7 @@ services:
     networks: [quickbite-net]
 
   menu-db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_DB: menu_db
       POSTGRES_USER: menu_user
@@ -198,7 +206,7 @@ services:
     networks: [quickbite-net]
 
   payment-db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_DB: payment_db
       POSTGRES_USER: postgres
@@ -215,6 +223,7 @@ services:
   payment-service:
     build: ./payment-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8085:8085"
@@ -230,7 +239,7 @@ services:
     networks: [quickbite-net]
 
   delivery-db:
-    image: postgres:16-alpine
+    image: postgres:15-alpine
     environment:
       POSTGRES_DB: delivery_db
       POSTGRES_USER: delivery_user
@@ -247,6 +256,7 @@ services:
   delivery-service:
     build: ./delivery-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8086:8086"
@@ -295,7 +305,7 @@ services:
 #    networks: [quickbite-net]
 #
 #  notification-db:
-#    image: postgres:16-alpine
+#    image: postgres:15-alpine
 #    environment:
 #      POSTGRES_DB: notification_db
 #      POSTGRES_USER: notification

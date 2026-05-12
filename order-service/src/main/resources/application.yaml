@@ -7,8 +7,11 @@ spring:
     username: ${DB_USERNAME:postgres}
     password: ${DB_PASSWORD:password}
   jpa:
+    # Flyway owns the schema (V1__init.sql). validate makes Hibernate fail
+    # fast if an entity drifts from the migration -- catches accidental
+    # entity changes that weren't matched by a new migration.
     hibernate:
-      ddl-auto: update
+      ddl-auto: validate
     show-sql: true
     properties:
       hibernate:
@@ -17,12 +20,23 @@ spring:
     jpa:
       repositories:
         bootstrap-mode: default
+  flyway:
+    enabled: true
+    locations: classpath:db/migration
 
 server:
   port: 7001
 
 user-service:
   url: ${USER_SERVICE_URL:http://localhost:7000}
+
+# JWT validation -- shared across all services in the stack. Defaults match
+# the dev secret/issuer used by user-service so a developer can run the
+# service without setting env vars; docker-compose injects production values
+# via the x-jwt-env anchor.
+jwt:
+  secret: ${JWT_SECRET:dGVzdC1zZWNyZXQtZm9yLWRldi1vbmx5LWRvLW5vdC11c2UtaW4tcHJvZC0xMjM0NTY=}
+  issuer: ${JWT_ISSUER:quickbite-user-service}
 
 springdoc:
   api-docs:

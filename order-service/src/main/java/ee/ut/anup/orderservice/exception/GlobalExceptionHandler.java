@@ -1,6 +1,7 @@
 package ee.ut.anup.orderservice.exception;
 
 import ee.ut.anup.orderservice.dto.ErrorResponseDto;
+import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpHeaders;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.HttpStatusCode;
@@ -19,6 +20,7 @@ import java.util.List;
 import java.util.Map;
 
 @ControllerAdvice
+@Slf4j
 public class GlobalExceptionHandler  extends ResponseEntityExceptionHandler {
 
     @Override
@@ -38,6 +40,7 @@ public class GlobalExceptionHandler  extends ResponseEntityExceptionHandler {
     @ExceptionHandler(Exception.class)
     public ResponseEntity<ErrorResponseDto> handleGlobalException(Exception exception,
                                                                   WebRequest webRequest) {
+        log.warn("unexpected 5xx path={} error={}", webRequest.getDescription(false), exception.toString(), exception);
         ErrorResponseDto errorResponseDTO = new ErrorResponseDto(
                 webRequest.getDescription(false),
                 HttpStatus.INTERNAL_SERVER_ERROR,
@@ -50,6 +53,7 @@ public class GlobalExceptionHandler  extends ResponseEntityExceptionHandler {
     @ExceptionHandler(ResourceNotFoundException.class)
     public ResponseEntity<ErrorResponseDto> handleResourceNotFoundException(ResourceNotFoundException exception,
                                                                                  WebRequest webRequest) {
+        log.debug("404 path={} reason={}", webRequest.getDescription(false), exception.getMessage());
         ErrorResponseDto errorResponseDTO = new ErrorResponseDto(
                 webRequest.getDescription(false),
                 HttpStatus.NOT_FOUND,
@@ -62,6 +66,7 @@ public class GlobalExceptionHandler  extends ResponseEntityExceptionHandler {
     @ExceptionHandler(IllegalArgumentException.class)
     public ResponseEntity<ErrorResponseDto> handleIllegalArgument(IllegalArgumentException exception,
                                                                   WebRequest webRequest) {
+        log.debug("400 path={} reason={}", webRequest.getDescription(false), exception.getMessage());
         ErrorResponseDto errorResponseDTO = new ErrorResponseDto(
                 webRequest.getDescription(false),
                 HttpStatus.BAD_REQUEST,
@@ -74,6 +79,7 @@ public class GlobalExceptionHandler  extends ResponseEntityExceptionHandler {
     @ExceptionHandler(CustomerAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDto> handleCustomerAlreadyExistsException(CustomerAlreadyExistsException exception,
                                                                                  WebRequest webRequest){
+        log.info("customer already exists path={} reason={}", webRequest.getDescription(false), exception.getMessage());
         ErrorResponseDto errorResponseDTO = new ErrorResponseDto(
                 webRequest.getDescription(false),
                 HttpStatus.BAD_REQUEST,

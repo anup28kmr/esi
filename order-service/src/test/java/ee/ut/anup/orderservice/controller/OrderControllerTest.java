@@ -5,12 +5,18 @@ import ee.ut.anup.orderservice.dto.OrderItemResponse;
 import ee.ut.anup.orderservice.dto.OrderResponse;
 import ee.ut.anup.orderservice.dto.PlaceOrderRequest;
 import ee.ut.anup.orderservice.dto.StatusUpdateRequest;
+import ee.ut.anup.orderservice.security.AuthenticatedUser;
 import ee.ut.anup.orderservice.service.OrderService;
+import org.junit.jupiter.api.AfterEach;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
 import org.junit.jupiter.api.extension.ExtendWith;
 import org.springframework.http.MediaType;
 import org.springframework.http.converter.json.JacksonJsonHttpMessageConverter;
+import org.springframework.security.authentication.UsernamePasswordAuthenticationToken;
+import org.springframework.security.core.authority.SimpleGrantedAuthority;
+import org.springframework.security.core.context.SecurityContextHolder;
+import org.springframework.security.web.method.annotation.AuthenticationPrincipalArgumentResolver;
 import org.springframework.test.web.servlet.MockMvc;
 import org.springframework.test.web.servlet.setup.MockMvcBuilders;
 
@@ -20,6 +26,7 @@ import org.mockito.junit.jupiter.MockitoExtension;
 import java.math.BigDecimal;
 import java.util.Collections;
 import java.util.List;
+import java.util.UUID;
 
 import static org.mockito.ArgumentMatchers.any;
 import static org.mockito.ArgumentMatchers.eq;
@@ -29,6 +36,8 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 
 @ExtendWith(MockitoExtension.class)
 class OrderControllerTest {
+
+    private static final UUID CUSTOMER_ID = UUID.fromString("11111111-1111-1111-1111-111111111111");
 
     @Mock
     private OrderService orderService;
@@ -43,19 +52,30 @@ class OrderControllerTest {
     void setUp() {
         objectMapper = new ObjectMapper();
         mockMvc = MockMvcBuilders.standaloneSetup(new OrderController(orderService))
+                .setCustomArgumentResolvers(new AuthenticationPrincipalArgumentResolver())
                 .setMessageConverters(new JacksonJsonHttpMessageConverter())
                 .build();
 
-        orderResponse = new OrderResponse(1L, 1L, "rest1", "PENDING", new BigDecimal("100.00"), Collections.emptyList(), true, true);
+        AuthenticatedUser principal = new AuthenticatedUser(CUSTOMER_ID, "Customer", "USER");
+        SecurityContextHolder.getContext().setAuthentication(
+                new UsernamePasswordAuthenticationToken(
+                        principal, null, List.of(new SimpleGrantedAuthority("ROLE_Customer"))));
+
+        orderResponse = new OrderResponse(1L, CUSTOMER_ID, "rest1", "PENDING",
+                new BigDecimal("100.00"), Collections.emptyList(), true, true);
+    }
+
+    @AfterEach
+    void tearDown() {
+        SecurityContextHolder.clearContext();
     }
 
     @Test
     void placeOrder_ShouldReturnCreated() throws Exception {
         PlaceOrderRequest request = new PlaceOrderRequest("rest1", Collections.emptyList());
-        when(orderService.placeOrder(eq(1L), any(PlaceOrderRequest.class))).thenReturn(orderResponse);
+        when(orderService.placeOrder(eq(CUSTOMER_ID), any(PlaceOrderRequest.class))).thenReturn(orderResponse);
 
         mockMvc.perform(post("/orders")
-                        .header("X-User-Id", 1L)
                         .contentType(MediaType.APPLICATION_JSON)
                         .content(objectMapper.writeValueAsString(request)))
                 .andExpect(status().isCreated())
@@ -74,7 +94,6 @@ class OrderControllerTest {
 
     @Test
     void cancelOrder_ShouldReturnNoContent() throws Exception {
-        // Mockito.doNothing() for void methods
         mockMvc.perform(delete("/orders/1"))
                 .andExpect(status().isNoContent());
     }
@@ -82,7 +101,8 @@ class OrderControllerTest {
     @Test
     void updateOrderStatus_ShouldReturnUpdatedOrder() throws Exception {
         StatusUpdateRequest request = new StatusUpdateRequest("ACCEPTED");
-        OrderResponse updatedResponse = new OrderResponse(1L, 1L, "rest1", "ACCEPTED", new BigDecimal("100.00"), Collections.emptyList(), true, true);
+        OrderResponse updatedResponse = new OrderResponse(1L, CUSTOMER_ID, "rest1", "ACCEPTED",
+                new BigDecimal("100.00"), Collections.emptyList(), true, true);
         when(orderService.updateOrderStatus(eq(1L), any(StatusUpdateRequest.class))).thenReturn(updatedResponse);
 
         mockMvc.perform(patch("/orders/1/status")
@@ -94,9 +114,9 @@ class OrderControllerTest {
 
     @Test
     void getOrdersByCustomer_ShouldReturnList() throws Exception {
-        when(orderService.getOrdersByCustomer(1L)).thenReturn(List.of(orderResponse));
+        when(orderService.getOrdersByCustomer(CUSTOMER_ID)).thenReturn(List.of(orderResponse));
 
-        mockMvc.perform(get("/orders").param("customerId", "1"))
+        mockMvc.perform(get("/orders").param("customerId", CUSTOMER_ID.toString()))
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].orderId").value(1L));
     }

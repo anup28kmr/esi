@@ -26,7 +26,7 @@ public class UserMapper {
                 user.getAddresses().stream()
                     .filter(ee.ut.anup.userservice.entity.Address::isDefault)
                     .findFirst()
-                    .orElse(user.getAddresses().getFirst()))
+                    .orElse(user.getAddresses().get(0)))
             : null);
   }
 

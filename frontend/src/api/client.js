@@ -45,6 +45,25 @@ async function parseBody(response) {
   return text;
 }
 
+/**
+ * Pulls a human-readable message out of a server error body. Backend services
+ * are not consistent: user-service uses `errorMessage`, others use `message`,
+ * Spring's default uses `error`, and Bean Validation 400s come back as a flat
+ * `{ fieldName: "msg", ... }` map. Returns null if no message can be found.
+ */
+function extractErrorMessage(body) {
+  if (!body) return null;
+  if (typeof body === 'string') return body;
+  if (typeof body !== 'object') return null;
+  if (body.errorMessage) return body.errorMessage;
+  if (body.message) return body.message;
+  if (body.error && typeof body.error === 'string') return body.error;
+  // Validation map: { email: "must be valid", password: "too short" }
+  const stringValues = Object.values(body).filter((v) => typeof v === 'string');
+  if (stringValues.length > 0) return stringValues.join('; ');
+  return null;
+}
+
 function handleUnauthenticated() {
   clearToken();
   if (typeof window !== 'undefined' && window.location.pathname !== '/login') {
@@ -101,9 +120,7 @@ export async function apiFetch(path, options = {}) {
 
   if (!response.ok) {
     console.error('[API Client] Request failed with status:', response.status, 'Body:', parsed);
-    const message =
-      (parsed && typeof parsed === 'object' && (parsed.message || parsed.error)) ||
-      `Request failed with status ${response.status}`;
+    const message = extractErrorMessage(parsed) || `Request failed with status ${response.status}`;
     throw new ApiError(message, { status: response.status, body: parsed });
   }
 

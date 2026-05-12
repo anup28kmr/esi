@@ -102,18 +102,8 @@
 import { api, ApiError } from '../api/client.js';
 import { getCurrentUser, isAuthenticated, readRole } from '../auth/token.js';
 
-// user-service issues userId claims as new UUID(0L, longId).toString(), e.g.
-// userId=2 -> "00000000-0000-0000-0000-000000000002". This mirrors that so
-// the frontend can match a Long userId against a restaurant's ownerId UUID.
-function longToOwnerUuid(longUserId) {
-  if (longUserId === null || longUserId === undefined) return null;
-  const n = Number(longUserId);
-  if (!Number.isFinite(n) || n < 0) return null;
-  // User IDs in this app are well inside Number.MAX_SAFE_INTEGER, so no
-  // BigInt is needed. Format mirrors Java `new UUID(0L, n).toString()`.
-  const hex = n.toString(16).padStart(16, '0');
-  return `00000000-0000-0000-${hex.slice(0, 4)}-${hex.slice(4)}`;
-}
+// user-service now stores native UUID ids, so `user.userId` is the same
+// string that ends up as a restaurant's `ownerId`. Compare directly.
 
 export default {
   name: 'OrderStatusView',
@@ -161,21 +151,20 @@ export default {
         this.loading = false;
       }
     },
-    // order-service: GET /orders?customerId=<Long> returns this customer's orders.
+    // order-service: GET /orders?customerId=<UUID> returns this customer's orders.
     async loadCustomerOrders(userId) {
       const list = await api.get(`/api/orders?customerId=${encodeURIComponent(userId)}`);
       return Array.isArray(list) ? list : [];
     },
     // Owner view: look up restaurants whose ownerId matches the logged-in
-    // user's synthesized UUID, then aggregate orders per restaurant.
-    // restaurant-service has no ?ownerId= filter, so we page through and
-    // filter client-side (small list in this app).
+    // user's UUID, then aggregate orders per restaurant. restaurant-service
+    // has no ?ownerId= filter, so we page through and filter client-side
+    // (small list in this app).
     async loadOwnerOrders(userId) {
-      const ownerUuid = longToOwnerUuid(userId);
-      if (!ownerUuid) return [];
+      if (!userId) return [];
       const page = await api.get('/api/restaurants?size=200');
       const all = Array.isArray(page?.content) ? page.content : (Array.isArray(page) ? page : []);
-      const owned = all.filter((r) => r.ownerId === ownerUuid);
+      const owned = all.filter((r) => r.ownerId === userId);
       if (owned.length === 0) return [];
       const results = await Promise.allSettled(
         owned.map((r) => api.get(`/api/orders?restaurantId=${encodeURIComponent(r.restaurantId)}`))

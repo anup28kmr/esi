@@ -21,6 +21,7 @@ import org.springframework.web.bind.annotation.*;
 import org.springframework.web.client.RestTemplate;
 
 import java.util.List;
+import java.util.UUID;
 
 @RestController
 @RequestMapping("/users")
@@ -86,7 +87,7 @@ public class UserController {
         content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @GetMapping("/{id}")
-  public UserDTO getUserProfile(@PathVariable Long id) {
+  public UserDTO getUserProfile(@PathVariable UUID id) {
     log.info("Get user profile request received, userId={}", id);
     UserDTO user = userService.getUserProfile(id);
     log.info("Get user profile completed, userId={}", id);
@@ -111,7 +112,7 @@ public class UserController {
         content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @PutMapping("/{id}")
-  public UserDTO updateUserProfile(@PathVariable Long id, @Valid @RequestBody UpdateUserDTO userDTO) {
+  public UserDTO updateUserProfile(@PathVariable UUID id, @Valid @RequestBody UpdateUserDTO userDTO) {
     log.info("Update user profile request received, userId={}", id);
     UserDTO updatedUser = userService.updateUserProfile(id, userDTO);
     log.info("Update user profile completed, userId={}", id);
@@ -133,7 +134,7 @@ public class UserController {
         content = @Content(schema = @Schema(implementation = ErrorResponseDTO.class)))
   })
   @GetMapping("/{id}/addresses")
-  public List<AddressDTO> getUserAddresses(@PathVariable Long id) {
+  public List<AddressDTO> getUserAddresses(@PathVariable UUID id) {
     log.info("Get user addresses request received, userId={}", id);
     List<AddressDTO> addresses = userService.getUserAddresses(id);
     log.info("Get user addresses completed, userId={}, count={}", id, addresses.size());
@@ -160,7 +161,7 @@ public class UserController {
   @PostMapping("/{id}/addresses")
   @ResponseStatus(HttpStatus.CREATED)
   public AddressDTO addUserAddress(
-      @PathVariable Long id, @Valid @RequestBody AddressDTO addressDTO) {
+      @PathVariable UUID id, @Valid @RequestBody AddressDTO addressDTO) {
     log.info("Add user address request received, userId={}", id);
     AddressDTO savedAddress = userService.addUserAddress(id, addressDTO);
     log.info("Add user address completed, userId={}", id);

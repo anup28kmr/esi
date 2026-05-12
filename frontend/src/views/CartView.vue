@@ -90,8 +90,8 @@ export default {
       }
       this.placing = true;
       try {
-        // order-service identifies the customer by an X-User-Id header
-        // (Long). The API gateway doesn't inject it -- we send it directly.
+        // order-service derives the customer id from the JWT in the
+        // Authorization header (attached by apiFetch automatically).
         // Body shape per OrderController: restaurantId + items[{ menuItemId,
         // name, unitPrice, quantity }]. The server computes totalAmount.
         const body = {
@@ -103,9 +103,7 @@ export default {
             quantity: i.quantity
           }))
         };
-        const placed = await api.post('/api/orders', body, {
-          headers: { 'X-User-Id': String(user.userId) }
-        });
+        const placed = await api.post('/api/orders', body);
         this.clear();
         this.$router.push({ name: 'orders', params: { id: String(placed.orderId) } });
       } catch (err) {
