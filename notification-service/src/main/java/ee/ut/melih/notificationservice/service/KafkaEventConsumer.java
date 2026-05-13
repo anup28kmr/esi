@@ -49,7 +49,7 @@ public class KafkaEventConsumer {
       return;
     }
     String message = (String) event.payload().getOrDefault("message", defaultMessage);
-    notificationService.send(new SendNotificationRequest(recipientId, Channel.PUSH, message));
+    notificationService.send(new SendNotificationRequest(recipientId, Channel.PUSH, message, event.type()));
   }
 
   private UUID resolveRecipient(Map<String, Object> payload) {

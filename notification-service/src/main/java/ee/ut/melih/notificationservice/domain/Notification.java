@@ -29,6 +29,12 @@ public class Notification {
   @Column(nullable = false, length = 1024)
   private String message;
 
+  // Optional Kafka event type that produced this notification
+  // (e.g. PAYMENT_CONFIRMED, DELIVERY_DISPATCHED). Null for hand-sent
+  // notifications. Lets the UI render type-specific icons / grouping.
+  @Column(name = "event_type", length = 64)
+  private String eventType;
+
   @Column(name = "sent_at")
   private Instant sentAt;
 
@@ -39,9 +45,14 @@ public class Notification {
   protected Notification() {}
 
   public Notification(UUID recipientId, Channel channel, String message) {
+    this(recipientId, channel, message, null);
+  }
+
+  public Notification(UUID recipientId, Channel channel, String message, String eventType) {
     this.recipientId = recipientId;
     this.channel = channel;
     this.message = message;
+    this.eventType = eventType;
     this.status = NotificationStatus.QUEUED;
   }
 
@@ -76,6 +87,10 @@ public class Notification {
 
   public String getMessage() {
     return message;
+  }
+
+  public String getEventType() {
+    return eventType;
   }
 
   public Instant getSentAt() {
