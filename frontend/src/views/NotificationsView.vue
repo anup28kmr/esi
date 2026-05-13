@@ -56,12 +56,27 @@ import { api, ApiError } from '../api/client.js';
 
 const POLL_MS = 5000;
 
+// Match A3 §6.2 event names (dotted lowercase) plus the equivalent
+// UPPER_SNAKE form, since Java producers often pick that style.
 const EVENT_ICONS = {
+  'payment.completed': '💳',
+  'payment.confirmed': '💳',
+  'payment.failed': '⚠️',
+  'payment.refunded': '↩️',
+  'delivery.status-changed': '🚚',
+  'delivery.assigned': '🚴',
+  'delivery.dispatched': '🚚',
+  'delivery.completed': '✅',
+  'order.placed': '🧾',
+  'order.confirmed': '👍',
+  'order.cancelled': '❌',
   PAYMENT_CONFIRMED: '💳',
+  PAYMENT_COMPLETED: '💳',
   PAYMENT_FAILED: '⚠️',
   PAYMENT_REFUNDED: '↩️',
   DELIVERY_DISPATCHED: '🚚',
   DELIVERY_ASSIGNED: '🚴',
+  DELIVERY_STATUS_CHANGED: '🚚',
   DELIVERY_COMPLETED: '✅',
   ORDER_PLACED: '🧾',
   ORDER_CONFIRMED: '👍',
@@ -139,9 +154,13 @@ export default {
     },
     titleFor(item) {
       if (item && item.eventType) {
+        // Split on both `_` and `.` and `-` so dotted-lowercase
+        // (`payment.completed`) and UPPER_SNAKE (`PAYMENT_COMPLETED`)
+        // both render cleanly.
         return item.eventType
           .toLowerCase()
-          .split('_')
+          .split(/[._-]/)
+          .filter(Boolean)
           .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
           .join(' ');
       }

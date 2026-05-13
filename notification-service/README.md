@@ -14,24 +14,37 @@ Owner: **Melih Arık** — service + Event Broker (Kafka) configuration.
 **Publish a Kafka event.** Do **not** call this service over REST.
 
 The Notification Service listens on three topics with the
-group id `notification-service`:
+group id `notification-service`. Topic + event names match A3 §6.2:
 
-| Topic | Producer | Example types |
-|---|---|---|
-| `payment-events` | Payment Service (Ege) | `PAYMENT_CONFIRMED`, `PAYMENT_FAILED`, `PAYMENT_REFUNDED` |
-| `delivery-events` | Delivery Service (Ege) | `DELIVERY_ASSIGNED`, `DELIVERY_DISPATCHED`, `DELIVERY_COMPLETED` |
-| `order-events` | Order Service (Anup) | `ORDER_PLACED`, `ORDER_CONFIRMED`, `ORDER_CANCELLED` |
+| Topic | Producer | Events (A3 §6.2) | Doc payload |
+|---|---|---|---|
+| `payment-events` | Payment Service (Ege) | `payment.completed`, `payment.failed` | `paymentId`, `orderId`, `amount` / `reason`, `occurredAt` |
+| `delivery-events` | Delivery Service (Ege) | `delivery.status-changed` | `deliveryId`, `orderId`, `status`, `occurredAt` |
+| `order-events` | Order Service (Anup) | `order.cancelled` | `orderId`, `reason`, `occurredAt` |
+
+> ⚠️ The A3 payload examples do not list a user id. The consumer
+> needs **one of** `recipientId`, `customerId`, `userId`, or
+> `driverId` (UUID) in the payload to know who to notify, so please
+> include the relevant id when you publish. Events without any of
+> these are skipped with a warning.
+
+UPPER_SNAKE alternatives (`PAYMENT_COMPLETED`, `DELIVERY_STATUS_CHANGED`,
+`ORDER_CANCELLED`, …) are also accepted — the consumer treats
+`event.type` as an opaque string and the frontend renders both
+styles correctly.
 
 ### Event envelope (`EventEnvelope`)
 
 ```json
 {
   "id": "65adfb1e-0d44-4f3e-9b6b-4d8a3b7f2c11",
-  "type": "PAYMENT_CONFIRMED",
+  "type": "payment.completed",
   "occurredAt": "2026-05-13T15:42:11Z",
   "payload": {
+    "paymentId": "9d8c5b21-5d7d-4d61-8e44-19c0a2c4a1ad",
     "orderId": 4231,
-    "recipientId": "11111111-1111-1111-1111-111111111111",
+    "amount": 24.50,
+    "customerId": "11111111-1111-1111-1111-111111111111",
     "message": "Your payment of $24.50 was confirmed"
   }
 }
@@ -39,16 +52,22 @@ group id `notification-service`:
 
 Field rules:
 
-- `id` — UUID, idempotency key for the event. Use `UUID.randomUUID()`.
-- `type` — short upper-snake-case event name. Reaches the frontend as
-  the icon + title (`PAYMENT_CONFIRMED` → 💳 "Payment Confirmed").
+- `id` — UUID. Used as the **idempotency key**: replaying the same
+  `id` is a no-op (A3 §6.2 at-least-once guarantee). Use
+  `UUID.randomUUID()` per event.
+- `type` — event name. Either dotted-lowercase (A3 convention,
+  e.g. `payment.completed`) or UPPER_SNAKE (e.g. `PAYMENT_COMPLETED`)
+  is fine — both render with the correct icon + title.
 - `occurredAt` — ISO-8601 instant in UTC. `Instant.now()` is fine.
-- `payload.recipientId` — **required UUID** of the user to notify.
-  The consumer also accepts `customerId` or `userId` as fallbacks.
-  Events without any of these are skipped with a warning.
+- **One of** `payload.recipientId` / `customerId` / `userId` /
+  `driverId` — **required UUID** of the user to notify (W2 sends to
+  both customer and driver, so both ids may be relevant — publish
+  one event per recipient). Events without any of these are skipped
+  with a warning.
 - `payload.message` — optional human-readable text. If omitted, the
-  consumer falls back to a generic message derived from the event
-  `type`.
+  consumer derives a generic message from the event `type`.
+- Extra fields (the A3-mandated `orderId`, `paymentId`, `deliveryId`,
+  etc.) are tolerated and ignored by Notification Service.
 
 Any extra fields you put in `payload` are tolerated (we use Jackson
 `spring.json.trusted.packages: "*"`), so feel free to include
@@ -60,19 +79,24 @@ Any extra fields you put in `payload` are tolerated (we use Jackson
 // In your service (Payment, Delivery, Order, ...):
 @Autowired KafkaTemplate<String, Object> kafkaTemplate;
 
-void notifyPaymentConfirmed(UUID customerId, long orderId, BigDecimal amount) {
+void notifyPaymentCompleted(UUID paymentId, UUID customerId,
+                            long orderId, BigDecimal amount) {
   Map<String, Object> payload = Map.of(
-      "orderId",     orderId,
-      "recipientId", customerId.toString(),
-      "message",     "Your payment of $" + amount + " was confirmed"
+      "paymentId",  paymentId.toString(),
+      "orderId",    orderId,
+      "amount",     amount,
+      "customerId", customerId.toString(),
+      "message",    "Your payment of $" + amount + " was confirmed"
   );
   Map<String, Object> event = Map.of(
       "id",         UUID.randomUUID().toString(),
-      "type",       "PAYMENT_CONFIRMED",
+      "type",       "payment.completed",
       "occurredAt", Instant.now().toString(),
       "payload",    payload
   );
-  kafkaTemplate.send("payment-events", customerId.toString(), event);
+  // Using the event id as the key keeps idempotency working
+  // even if Kafka re-delivers the message.
+  kafkaTemplate.send("payment-events", event.get("id").toString(), event);
 }
 ```
 
