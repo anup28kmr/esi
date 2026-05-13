@@ -43,14 +43,6 @@ import {
 
 const POLL_MS = 10000;
 
-function resolveUserId() {
-  const user = getCurrentUser();
-  if (user && user.userId) return user.userId;
-  const claims = readClaims();
-  if (claims && claims.userId) return claims.userId;
-  return null;
-}
-
 export default {
   name: 'AppNav',
   components: { RouterLink },
@@ -105,12 +97,9 @@ export default {
       }
     },
     async fetchUnread() {
-      const userId = resolveUserId();
-      if (!userId) return;
       try {
-        const res = await api.get('/api/notifications/unread-count', {
-          headers: { 'X-User-Id': userId }
-        });
+        // The bearer token identifies the user; no header propagation needed.
+        const res = await api.get('/api/notifications/unread-count');
         this.unreadCount = (res && res.unreadCount) || 0;
       } catch (_err) {
         // Silent: nav badge shouldn't surface errors. Keep previous count.

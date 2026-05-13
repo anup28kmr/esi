@@ -53,7 +53,6 @@
 
 <script>
 import { api, ApiError } from '../api/client.js';
-import { getCurrentUser, readClaims } from '../auth/token.js';
 
 const POLL_MS = 5000;
 
@@ -70,14 +69,6 @@ const EVENT_ICONS = {
 };
 
 const CHANNEL_ICONS = { PUSH: '🔔', EMAIL: '✉️', SMS: '💬' };
-
-function resolveUserId() {
-  const user = getCurrentUser();
-  if (user && user.userId) return user.userId;
-  const claims = readClaims();
-  if (claims && claims.userId) return claims.userId;
-  return null;
-}
 
 export default {
   name: 'NotificationsView',
@@ -99,16 +90,12 @@ export default {
   },
   methods: {
     async refresh() {
-      const userId = resolveUserId();
-      if (!userId) {
-        // Router guard will redirect; don't surface an error in the meantime.
-        return;
-      }
       try {
-        const headers = { 'X-User-Id': userId };
+        // Backend identifies the user from the bearer token, no userId
+        // header needed — the JWT filter sets the SecurityContext principal.
         const [count, list] = await Promise.all([
-          api.get('/api/notifications/unread-count', { headers }),
-          api.get('/api/notifications', { headers })
+          api.get('/api/notifications/unread-count'),
+          api.get('/api/notifications')
         ]);
         this.unreadCount = (count && count.unreadCount) || 0;
         this.items = Array.isArray(list) ? list : [];
@@ -125,24 +112,17 @@ export default {
       }
     },
     async markAllRead() {
-      const userId = resolveUserId();
-      if (!userId) return;
       try {
-        await api.patch('/api/notifications/read-all', null, {
-          headers: { 'X-User-Id': userId }
-        });
+        await api.patch('/api/notifications/read-all', null);
         await this.refresh();
       } catch (err) {
         this.error = err.message || 'Failed to mark all as read';
       }
     },
     async markOneRead(item) {
-      const userId = resolveUserId();
-      if (!userId || !item || !item.id) return;
+      if (!item || !item.id) return;
       try {
-        await api.patch(`/api/notifications/${item.id}/read`, null, {
-          headers: { 'X-User-Id': userId }
-        });
+        await api.patch(`/api/notifications/${item.id}/read`, null);
         await this.refresh();
       } catch (err) {
         this.error = err.message || 'Failed to mark as read';
