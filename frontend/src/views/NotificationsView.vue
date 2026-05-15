@@ -1,106 +1,188 @@
 <template>
   <section class="notifications">
-    <h1>My notifications</h1>
-    <p class="muted">
-      Reads from <code>notification-service</code> through the API gateway. The
-      <code>X-User-Id</code> header would normally be set by the gateway after
-      token validation; until that lands in CP3, this page asks for the id.
-    </p>
-
-    <form class="lookup" @submit.prevent="load">
-      <label>
-        User ID (UUID)
-        <input v-model.trim="userId" placeholder="11111111-1111-1111-1111-111111111111" required />
-      </label>
-      <button type="submit" :disabled="loading">Load</button>
-    </form>
+    <header class="page-head">
+      <h1>Notifications</h1>
+      <div class="head-actions">
+        <span v-if="unreadCount" class="badge">{{ unreadCount }} unread</span>
+        <button class="btn-link" :disabled="!unreadCount" @click="markAllRead">
+          Mark all as read
+        </button>
+      </div>
+    </header>
 
     <div v-if="error" class="error">{{ error }}</div>
 
-    <div v-if="loaded" class="summary">
-      <div class="card">
-        <div class="card-label">Unread</div>
-        <div class="card-value">{{ unreadCount }}</div>
-      </div>
-      <div class="card">
-        <div class="card-label">Total visible</div>
-        <div class="card-value">{{ items.length }}</div>
-      </div>
-      <button class="btn-link" :disabled="!unreadCount" @click="markAllRead">
-        Mark all as read
-      </button>
-    </div>
-
-    <ul v-if="loaded && items.length" class="list">
-      <li v-for="item in items" :key="item.id" :class="['row', item.status.toLowerCase()]">
-        <div class="row-main">
-          <span class="channel">{{ item.channel }}</span>
-          <span class="message">{{ item.message }}</span>
+    <ul v-if="items.length" class="feed">
+      <li
+        v-for="item in items"
+        :key="item.id"
+        :class="['notif', isRead(item) ? 'read' : 'unread']"
+      >
+        <div class="icon" :title="item.eventType || item.channel">
+          {{ iconFor(item) }}
         </div>
-        <div class="row-meta">
-          <span class="status">{{ item.status }}</span>
-          <span v-if="item.sentAt" class="ts">{{ formatTs(item.sentAt) }}</span>
+        <div class="body">
+          <div class="title-row">
+            <span class="title">{{ titleFor(item) }}</span>
+            <span class="ts" :title="formatAbsolute(item.sentAt)">
+              {{ formatRelative(item.sentAt) }}
+            </span>
+          </div>
+          <div class="message">{{ item.message }}</div>
+          <div class="meta">
+            <span class="chip">{{ item.channel }}</span>
+            <span class="chip status">{{ item.status }}</span>
+            <button
+              v-if="!isRead(item)"
+              class="mark-one"
+              @click="markOneRead(item)"
+            >
+              Mark as read
+            </button>
+          </div>
         </div>
       </li>
     </ul>
 
-    <p v-else-if="loaded" class="muted">No notifications for this user yet.</p>
+    <p v-else-if="loaded" class="empty">
+      You're all caught up — no notifications yet.
+    </p>
+    <p v-else class="empty">Loading…</p>
   </section>
 </template>
 
 <script>
 import { api, ApiError } from '../api/client.js';
 
-// Direct base URL for local frontend dev when the gateway isn't running.
-// `api.get(...)` passes absolute URLs through `client.js` `buildUrl` unchanged.
-// In production behind the gateway, switch back to relative '/notifications'.
-const NOTIF_BASE = 'http://localhost:8087';
+const POLL_MS = 5000;
+
+// Match A3 §6.2 event names (dotted lowercase) plus the equivalent
+// UPPER_SNAKE form, since Java producers often pick that style.
+const EVENT_ICONS = {
+  'payment.completed': '💳',
+  'payment.confirmed': '💳',
+  'payment.failed': '⚠️',
+  'payment.refunded': '↩️',
+  'delivery.status-changed': '🚚',
+  'delivery.assigned': '🚴',
+  'delivery.dispatched': '🚚',
+  'delivery.completed': '✅',
+  'order.placed': '🧾',
+  'order.confirmed': '👍',
+  'order.cancelled': '❌',
+  PAYMENT_CONFIRMED: '💳',
+  PAYMENT_COMPLETED: '💳',
+  PAYMENT_FAILED: '⚠️',
+  PAYMENT_REFUNDED: '↩️',
+  DELIVERY_DISPATCHED: '🚚',
+  DELIVERY_ASSIGNED: '🚴',
+  DELIVERY_STATUS_CHANGED: '🚚',
+  DELIVERY_COMPLETED: '✅',
+  ORDER_PLACED: '🧾',
+  ORDER_CONFIRMED: '👍',
+  ORDER_CANCELLED: '❌'
+};
+
+const CHANNEL_ICONS = { PUSH: '🔔', EMAIL: '✉️', SMS: '💬' };
 
 export default {
   name: 'NotificationsView',
   data() {
     return {
-      userId: '11111111-1111-1111-1111-111111111111',
       items: [],
       unreadCount: 0,
-      loading: false,
       loaded: false,
-      error: ''
+      error: '',
+      pollTimer: null
     };
   },
+  mounted() {
+    this.refresh();
+    this.pollTimer = window.setInterval(this.refresh, POLL_MS);
+  },
+  beforeUnmount() {
+    if (this.pollTimer) window.clearInterval(this.pollTimer);
+  },
   methods: {
-    async load() {
-      this.loading = true;
-      this.error = '';
+    async refresh() {
       try {
-        const headers = { 'X-User-Id': this.userId };
+        // Backend identifies the user from the bearer token, no userId
+        // header needed — the JWT filter sets the SecurityContext principal.
         const [count, list] = await Promise.all([
-          api.get(`${NOTIF_BASE}/notifications/unread-count`, { headers }),
-          api.get(`${NOTIF_BASE}/notifications`, { headers })
+          api.get('/api/notifications/unread-count'),
+          api.get('/api/notifications')
         ]);
         this.unreadCount = (count && count.unreadCount) || 0;
         this.items = Array.isArray(list) ? list : [];
         this.loaded = true;
+        this.error = '';
       } catch (err) {
-        this.error =
-          err instanceof ApiError
-            ? `${err.status || ''} ${err.message}`.trim()
-            : err.message || 'Unknown error';
-      } finally {
-        this.loading = false;
+        // 401s redirect via the client; transient network blips shouldn't
+        // wipe the screen, only first-load errors should be visible.
+        if (err instanceof ApiError && err.status === 401) return;
+        const msg = err instanceof ApiError
+          ? `${err.status || ''} ${err.message}`.trim()
+          : err.message || 'Unknown error';
+        if (!this.loaded) this.error = msg;
       }
     },
     async markAllRead() {
       try {
-        await api.patch(`${NOTIF_BASE}/notifications/read-all`, null, {
-          headers: { 'X-User-Id': this.userId }
-        });
-        await this.load();
+        await api.patch('/api/notifications/read-all', null);
+        await this.refresh();
       } catch (err) {
         this.error = err.message || 'Failed to mark all as read';
       }
     },
-    formatTs(iso) {
+    async markOneRead(item) {
+      if (!item || !item.id) return;
+      try {
+        await api.patch(`/api/notifications/${item.id}/read`, null);
+        await this.refresh();
+      } catch (err) {
+        this.error = err.message || 'Failed to mark as read';
+      }
+    },
+    isRead(item) {
+      return item && item.status === 'READ';
+    },
+    iconFor(item) {
+      if (!item) return '🔔';
+      if (item.eventType && EVENT_ICONS[item.eventType]) return EVENT_ICONS[item.eventType];
+      if (CHANNEL_ICONS[item.channel]) return CHANNEL_ICONS[item.channel];
+      return '🔔';
+    },
+    titleFor(item) {
+      if (item && item.eventType) {
+        // Split on both `_` and `.` and `-` so dotted-lowercase
+        // (`payment.completed`) and UPPER_SNAKE (`PAYMENT_COMPLETED`)
+        // both render cleanly.
+        return item.eventType
+          .toLowerCase()
+          .split(/[._-]/)
+          .filter(Boolean)
+          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+          .join(' ');
+      }
+      return 'Notification';
+    },
+    formatRelative(iso) {
+      if (!iso) return '';
+      const then = new Date(iso).getTime();
+      if (Number.isNaN(then)) return '';
+      const diffSec = Math.round((Date.now() - then) / 1000);
+      if (diffSec < 5) return 'just now';
+      if (diffSec < 60) return `${diffSec}s ago`;
+      const min = Math.round(diffSec / 60);
+      if (min < 60) return `${min} min ago`;
+      const hr = Math.round(min / 60);
+      if (hr < 24) return `${hr} hr ago`;
+      const day = Math.round(hr / 24);
+      if (day < 7) return `${day} d ago`;
+      return new Date(iso).toLocaleDateString();
+    },
+    formatAbsolute(iso) {
+      if (!iso) return '';
       try {
         return new Date(iso).toLocaleString();
       } catch (_e) {
@@ -117,88 +199,162 @@ export default {
   margin: 0 auto;
   padding: 1.5rem 1rem;
 }
-.lookup {
+
+.page-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  margin-bottom: 1rem;
+}
+
+.head-actions {
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+}
+
+.badge {
+  background: var(--qb-accent);
+  color: #fff;
+  font-size: 0.75rem;
+  font-weight: 700;
+  padding: 0.2rem 0.55rem;
+  border-radius: 999px;
+}
+
+.feed {
+  list-style: none;
+  padding: 0;
+  margin: 0;
+}
+
+.notif {
   display: flex;
   gap: 0.75rem;
-  align-items: end;
-  margin: 1rem 0;
-}
-.lookup label {
-  display: flex;
-  flex-direction: column;
-  flex: 1;
-  font-size: 0.875rem;
-}
-.lookup input {
-  padding: 0.5rem;
+  align-items: flex-start;
+  padding: 0.85rem 1rem;
   border: 1px solid var(--qb-border);
+  border-radius: 8px;
+  margin-bottom: 0.6rem;
+  background: #fff;
+  transition: background-color 0.15s ease;
+}
+
+.notif.unread {
+  background: #fff7e6;
+  border-left: 4px solid var(--qb-accent);
+}
+
+.notif.read {
+  opacity: 0.65;
+}
+
+.icon {
+  font-size: 1.5rem;
+  line-height: 1;
+  flex-shrink: 0;
+  padding-top: 0.1rem;
+}
+
+.body {
+  flex: 1;
+  min-width: 0;
+}
+
+.title-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: baseline;
+  gap: 0.5rem;
+}
+
+.title {
+  font-weight: 600;
+  color: var(--qb-fg);
+}
+
+.ts {
+  font-size: 0.75rem;
+  color: var(--qb-muted);
+  flex-shrink: 0;
+}
+
+.message {
+  margin-top: 0.2rem;
+  color: var(--qb-fg);
+  word-break: break-word;
+}
+
+.meta {
+  margin-top: 0.4rem;
+  display: flex;
+  gap: 0.4rem;
+  align-items: center;
+}
+
+.chip {
+  font-size: 0.7rem;
+  font-weight: 600;
+  text-transform: uppercase;
+  padding: 0.1rem 0.5rem;
+  border-radius: 999px;
+  background: #f1f1f1;
+  color: var(--qb-muted);
+}
+
+.chip.status {
+  background: #eaf6ea;
+  color: #1f7a1f;
+}
+
+.notif.unread .chip.status {
+  background: #fff1d6;
+  color: #8a5a00;
+}
+
+.mark-one {
+  margin-left: auto;
+  background: transparent;
+  border: none;
+  color: var(--qb-accent);
+  cursor: pointer;
+  font-size: 0.75rem;
+  font-weight: 600;
+  padding: 0.1rem 0.35rem;
   border-radius: 4px;
   font-family: inherit;
 }
-.summary {
-  display: flex;
-  gap: 1rem;
-  align-items: center;
-  margin: 1rem 0;
+
+.mark-one:hover {
+  background: rgba(217, 56, 30, 0.08);
+  text-decoration: underline;
 }
-.card {
-  border: 1px solid var(--qb-border);
-  border-radius: 6px;
-  padding: 0.75rem 1rem;
-  background: #fff;
-}
-.card-label {
-  font-size: 0.75rem;
-  color: var(--qb-muted);
-  text-transform: uppercase;
-}
-.card-value {
-  font-size: 1.5rem;
-  font-weight: 700;
-}
-.list {
-  list-style: none;
-  padding: 0;
-  margin: 1rem 0;
-}
-.row {
-  display: flex;
-  justify-content: space-between;
-  border: 1px solid var(--qb-border);
-  border-radius: 6px;
-  padding: 0.75rem;
-  margin-bottom: 0.5rem;
-  background: #fff;
-}
-.row.read {
-  opacity: 0.6;
-}
-.row-main {
-  display: flex;
-  gap: 0.75rem;
-  align-items: center;
-}
-.channel {
-  font-size: 0.75rem;
-  font-weight: 700;
+
+.btn-link {
+  background: transparent;
   color: var(--qb-accent);
+  border: none;
+  padding: 0.25rem 0.5rem;
+  cursor: pointer;
+  font: inherit;
 }
-.row-meta {
-  display: flex;
-  flex-direction: column;
-  align-items: flex-end;
-  font-size: 0.75rem;
-  color: var(--qb-muted);
+
+.btn-link:disabled {
+  opacity: 0.4;
+  cursor: not-allowed;
 }
-.status {
-  font-weight: 600;
-}
+
 .error {
   color: #b00020;
   margin: 0.5rem 0;
+  padding: 0.5rem;
+  background: #fdecea;
+  border-radius: 4px;
 }
-.muted {
+
+.empty {
   color: var(--qb-muted);
-  font-size: 0.875rem;
+  text-align: center;
+  padding: 2rem 0;
 }
 </style>

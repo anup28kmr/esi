@@ -77,7 +77,8 @@ const routes = [
   {
     path: '/notifications',
     name: 'notifications',
-    component: NotificationsView
+    component: NotificationsView,
+    meta: { requiresAuth: true }
   },
   {
     path: '/deliveries',

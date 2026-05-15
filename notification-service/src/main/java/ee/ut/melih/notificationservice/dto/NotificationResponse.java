@@ -11,6 +11,7 @@ public record NotificationResponse(
     UUID recipientId,
     Channel channel,
     String message,
+    String eventType,
     Instant sentAt,
     NotificationStatus status) {
 
@@ -20,6 +21,7 @@ public record NotificationResponse(
         entity.getRecipientId(),
         entity.getChannel(),
         entity.getMessage(),
+        entity.getEventType(),
         entity.getSentAt(),
         entity.getStatus());
   }

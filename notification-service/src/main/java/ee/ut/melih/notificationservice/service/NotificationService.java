@@ -68,7 +68,7 @@ public class NotificationService {
   @Transactional
   public Notification send(SendNotificationRequest request) {
     Notification notification =
-        new Notification(request.recipientId(), request.channel(), request.message());
+        new Notification(request.recipientId(), request.channel(), request.message(), request.eventType());
     notification = repository.save(notification);
     try {
       dispatcher.dispatch(notification);

@@ -44,6 +44,8 @@ public class GatewayRoutesConfig {
   @Value("${PAYMENT_SERVICE_PORT:8085}")            private int paymentPort;
   @Value("${DELIVERY_SERVICE_HOST:delivery-service}") private String deliveryHost;
   @Value("${DELIVERY_SERVICE_PORT:8086}")           private int deliveryPort;
+  @Value("${NOTIFICATION_SERVICE_HOST:notification-service}") private String notificationHost;
+  @Value("${NOTIFICATION_SERVICE_PORT:8087}")       private int notificationPort;
 
   @Bean
   public RouterFunction<ServerResponse> gatewayRoutes() {
@@ -74,7 +76,10 @@ public class GatewayRoutesConfig {
             paymentUrl()))
         .and(apiRoute("delivery-service",
             path("/api/deliveries").or(path("/api/deliveries/**")),
-            deliveryUrl()));
+            deliveryUrl()))
+        .and(apiRoute("notification-service",
+            path("/api/notifications").or(path("/api/notifications/**")),
+            notificationUrl()));
   }
 
   private RouterFunction<ServerResponse> apiRoute(
@@ -96,4 +101,5 @@ public class GatewayRoutesConfig {
   private String menuUrl()       { return "http://" + menuHost       + ":" + menuPort; }
   private String paymentUrl()    { return "http://" + paymentHost    + ":" + paymentPort; }
   private String deliveryUrl()   { return "http://" + deliveryHost   + ":" + deliveryPort; }
+  private String notificationUrl() { return "http://" + notificationHost + ":" + notificationPort; }
 }

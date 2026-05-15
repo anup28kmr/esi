@@ -7,14 +7,14 @@
       <li><RouterLink to="/">Home</RouterLink></li>
       <li><RouterLink to="/restaurants">Restaurants</RouterLink></li>
       <li v-if="authed"><RouterLink to="/profile">User Profile</RouterLink></li>
-      <li v-if="authed">
-        <RouterLink to="/cart">
-          Cart<span v-if="cartCount > 0" class="cart-badge">{{ cartCount }}</span>
+      <li v-if="authed"><RouterLink to="/cart">Cart</RouterLink></li>
+      <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
+      <li v-if="authed" class="notif-link">
+        <RouterLink to="/notifications">
+          Notifications
+          <span v-if="unreadCount > 0" class="unread-dot">{{ unreadCount > 99 ? '99+' : unreadCount }}</span>
         </RouterLink>
       </li>
-      <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
-      <li><RouterLink to="/notifications">Notifications</RouterLink></li>
-      <li><RouterLink to="/deliveries">Deliveries</RouterLink></li>
     </ul>
     <div class="auth">
       <template v-if="authed">
@@ -31,21 +31,38 @@
 
 <script>
 import { RouterLink } from 'vue-router';
-import { clearCurrentUser, clearToken, getCurrentUser, isAuthenticated, readClaims } from '../auth/token.js';
-import { useCart } from '../composables/useCart.js';
+import { api } from '../api/client.js';
+import {
+  authStateVersion,
+  clearCurrentUser,
+  clearToken,
+  getCurrentUser,
+  isAuthenticated,
+  readClaims
+} from '../auth/token.js';
+
+const POLL_MS = 10000;
 
 export default {
   name: 'AppNav',
   components: { RouterLink },
-  setup() {
-    const { itemCount } = useCart();
-    return { cartCount: itemCount };
+  data() {
+    return {
+      unreadCount: 0,
+      pollTimer: null
+    };
   },
   computed: {
     authed() {
+      // Touch the shared auth version ref so updates from login/logout become reactive.
+      // eslint-disable-next-line no-unused-expressions
+      authStateVersion.value;
       return isAuthenticated();
     },
     displayName() {
+      // Keep the label in sync when the current-user payload changes.
+      // eslint-disable-next-line no-unused-expressions
+      authStateVersion.value;
       const currentUser = getCurrentUser();
       if (currentUser) {
         return currentUser.fullName || currentUser.email || currentUser.userId || 'user';
@@ -55,7 +72,39 @@ export default {
       return claims.sub || claims.userId || 'user';
     }
   },
+  watch: {
+    authed: {
+      immediate: true,
+      handler(isAuthed) {
+        this.stopPolling();
+        if (isAuthed) {
+          this.fetchUnread();
+          this.pollTimer = window.setInterval(this.fetchUnread, POLL_MS);
+        } else {
+          this.unreadCount = 0;
+        }
+      }
+    }
+  },
+  beforeUnmount() {
+    this.stopPolling();
+  },
   methods: {
+    stopPolling() {
+      if (this.pollTimer) {
+        window.clearInterval(this.pollTimer);
+        this.pollTimer = null;
+      }
+    },
+    async fetchUnread() {
+      try {
+        // The bearer token identifies the user; no header propagation needed.
+        const res = await api.get('/api/notifications/unread-count');
+        this.unreadCount = (res && res.unreadCount) || 0;
+      } catch (_err) {
+        // Silent: nav badge shouldn't surface errors. Keep previous count.
+      }
+    },
     onLogout() {
       clearToken();
       clearCurrentUser();
@@ -97,6 +146,22 @@ export default {
   border-radius: 4px;
 }
 
+.unread-dot {
+  display: inline-block;
+  background: #d9381e;
+  color: #fff;
+  font-size: 0.7rem;
+  font-weight: 700;
+  border-radius: 999px;
+  padding: 0 0.45rem;
+  margin-left: 0.4rem;
+  min-width: 18px;
+  height: 18px;
+  line-height: 18px;
+  text-align: center;
+  vertical-align: middle;
+}
+
 
 .auth {
   margin-left: auto;
@@ -109,17 +174,5 @@ export default {
   background: transparent;
   color: var(--qb-accent);
   padding: 0.25rem 0.5rem;
-}
-
-.cart-badge {
-  display: inline-block;
-  margin-left: 0.35rem;
-  background: var(--qb-accent);
-  color: #fff;
-  font-size: 0.7rem;
-  font-weight: 700;
-  border-radius: 999px;
-  padding: 0.05rem 0.4rem;
-  vertical-align: top;
 }
 </style>
