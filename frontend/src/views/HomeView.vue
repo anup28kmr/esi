@@ -22,7 +22,6 @@
       </router-link>
     </div>
 
-    <p class="muted base-url">API base: <code>{{ apiBase }}</code></p>
   </section>
 </template>
 

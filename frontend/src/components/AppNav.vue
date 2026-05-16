@@ -7,7 +7,12 @@
       <li><RouterLink to="/">Home</RouterLink></li>
       <li><RouterLink to="/restaurants">Restaurants</RouterLink></li>
       <li v-if="authed"><RouterLink to="/profile">User Profile</RouterLink></li>
-      <li v-if="authed"><RouterLink to="/cart">Cart</RouterLink></li>
+      <li v-if="authed && !isOwner" class="cart-link">
+        <RouterLink to="/cart">
+          Cart
+          <span v-if="cartCount > 0" class="cart-dot">{{ cartCount > 99 ? '99+' : cartCount }}</span>
+        </RouterLink>
+      </li>
       <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
       <li v-if="authed" class="notif-link">
         <RouterLink to="/notifications">
@@ -38,14 +43,23 @@ import {
   clearToken,
   getCurrentUser,
   isAuthenticated,
-  readClaims
+  readClaims,
+  readRole
 } from '../auth/token.js';
+import { useCart } from '../composables/useCart.js';
 
 const POLL_MS = 10000;
 
 export default {
   name: 'AppNav',
   components: { RouterLink },
+  setup() {
+    // Expose the shared cart's itemCount as a reactive computed so the
+    // navbar badge updates the moment an item is added or removed from
+    // anywhere in the app.
+    const { itemCount } = useCart();
+    return { cartCount: itemCount };
+  },
   data() {
     return {
       unreadCount: 0,
@@ -58,6 +72,12 @@ export default {
       // eslint-disable-next-line no-unused-expressions
       authStateVersion.value;
       return isAuthenticated();
+    },
+    isOwner() {
+      // eslint-disable-next-line no-unused-expressions
+      authStateVersion.value;
+      const role = readRole();
+      return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
     },
     displayName() {
       // Keep the label in sync when the current-user payload changes.
@@ -146,9 +166,9 @@ export default {
   border-radius: 4px;
 }
 
-.unread-dot {
+.unread-dot,
+.cart-dot {
   display: inline-block;
-  background: #d9381e;
   color: #fff;
   font-size: 0.7rem;
   font-weight: 700;
@@ -161,6 +181,9 @@ export default {
   text-align: center;
   vertical-align: middle;
 }
+
+.unread-dot { background: #d9381e; }
+.cart-dot { background: var(--qb-accent); }
 
 
 .auth {

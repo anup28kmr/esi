@@ -48,7 +48,6 @@
 
       <section v-if="canManage" class="edit-panel">
         <h2>Edit item</h2>
-        <p class="muted">Sends <code>PUT /api/menu-items/{{ item.menuItemId }}</code>.</p>
 
         <form @submit.prevent="onSave" novalidate>
           <label for="name">Name</label>

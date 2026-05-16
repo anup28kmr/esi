@@ -1,7 +1,7 @@
 <template>
   <section class="restaurant-list">
     <header class="list-header">
-      <h1>Restaurants</h1>
+      <h1>{{ ownerScoped ? 'Your restaurants' : 'Restaurants' }}</h1>
       <router-link v-if="canManage" to="/restaurants/new" class="btn">
         Add restaurant
       </router-link>
@@ -31,7 +31,9 @@
     <div v-if="loading" class="muted" role="status">Loading restaurants…</div>
 
     <div v-else-if="restaurants.length === 0" class="empty">
-      No restaurants match the current filters.
+      {{ ownerScoped
+        ? "You haven't added any restaurants yet."
+        : 'No restaurants match the current filters.' }}
     </div>
 
     <ul v-else class="cards">
@@ -57,7 +59,7 @@
 
 <script>
 import { api, ApiError } from '../api/client.js';
-import { canManageRestaurants } from '../auth/token.js';
+import { canManageRestaurants, isRestaurantOwner } from '../auth/token.js';
 
 export default {
   name: 'RestaurantListView',
@@ -73,6 +75,9 @@ export default {
   computed: {
     canManage() {
       return canManageRestaurants();
+    },
+    ownerScoped() {
+      return isRestaurantOwner();
     }
   },
   mounted() {

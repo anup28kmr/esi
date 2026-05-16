@@ -34,8 +34,9 @@
         <strong>{{ Number(order.totalAmount).toFixed(2) }}</strong>
       </div>
 
-      <div v-if="canCancel(order)" class="card-actions">
+      <div v-if="canCancel(order) || canDecide(order)" class="card-actions">
         <button
+          v-if="canCancel(order)"
           type="button"
           class="cancel-btn"
           :disabled="cancellingId === order.orderId"
@@ -43,6 +44,24 @@
         >
           {{ cancellingId === order.orderId ? 'Cancelling…' : 'Cancel order' }}
         </button>
+        <template v-if="canDecide(order)">
+          <button
+            type="button"
+            class="reject-btn"
+            :disabled="decidingId === order.orderId"
+            @click="decide(order, 'reject')"
+          >
+            {{ decidingId === order.orderId ? 'Working…' : 'Reject' }}
+          </button>
+          <button
+            type="button"
+            class="accept-btn"
+            :disabled="decidingId === order.orderId"
+            @click="decide(order, 'accept')"
+          >
+            {{ decidingId === order.orderId ? 'Working…' : 'Accept' }}
+          </button>
+        </template>
       </div>
     </article>
 
@@ -82,6 +101,24 @@
               >
                 {{ cancellingId === o.orderId ? 'Cancelling…' : 'Cancel' }}
               </button>
+              <template v-if="canDecide(o)">
+                <button
+                  type="button"
+                  class="reject-btn"
+                  :disabled="decidingId === o.orderId"
+                  @click="decide(o, 'reject')"
+                >
+                  {{ decidingId === o.orderId ? 'Working…' : 'Reject' }}
+                </button>
+                <button
+                  type="button"
+                  class="accept-btn"
+                  :disabled="decidingId === o.orderId"
+                  @click="decide(o, 'accept')"
+                >
+                  {{ decidingId === o.orderId ? 'Working…' : 'Accept' }}
+                </button>
+              </template>
               <router-link :to="{ name: 'orders', params: { id: String(o.orderId) } }" class="btn-link">
                 View details
               </router-link>
@@ -109,7 +146,15 @@ export default {
   name: 'OrderStatusView',
   props: { id: { type: String, default: '' } },
   data() {
-    return { order: null, orders: [], loading: false, error: '', restaurants: {}, cancellingId: null };
+    return {
+      order: null,
+      orders: [],
+      loading: false,
+      error: '',
+      restaurants: {},
+      cancellingId: null,
+      decidingId: null
+    };
   },
   computed: {
     isLoggedIn() { return isAuthenticated(); },
@@ -192,16 +237,47 @@ export default {
     },
     statusClass(status) {
       const s = (status || '').toUpperCase();
-      if (s.includes('DELIVER') || s.includes('COMPLET')) return 'success';
+      if (s === 'ACCEPTED' || s.includes('DELIVER') || s.includes('COMPLET')) return 'success';
       if (s.includes('CANCEL') || s.includes('FAIL') || s.includes('REJECT')) return 'failure';
       return 'pending';
     },
-    // order-service: DELETE /orders/{id} only succeeds while status is PENDING
-    // (before the restaurant accepts). Customers are the only role who should
-    // cancel their own orders -- owners managing restaurants have a different
-    // workflow.
+    // order-service: DELETE /orders/{id} only succeeds while status is PLACED
+    // (before payment). Customers are the only role who should cancel their
+    // own orders -- owners managing restaurants have the accept/reject flow.
     canCancel(o) {
-      return Boolean(o && !this.isOwner && (o.status || '').toUpperCase() === 'PENDING');
+      const s = (o && o.status || '').toUpperCase();
+      return Boolean(o && !this.isOwner && (s === 'PLACED' || s === 'PENDING'));
+    },
+    // Owners decide on CONFIRMED orders (post-payment, post-delivery-scheduling).
+    canDecide(o) {
+      return Boolean(o && this.isOwner && (o.status || '').toUpperCase() === 'CONFIRMED');
+    },
+    async decide(o, action) {
+      if (!o || this.decidingId !== null) return;
+      const verb = action === 'accept' ? 'Accept' : 'Reject';
+      const confirmed = typeof window !== 'undefined'
+        ? window.confirm(`${verb} order #${o.orderId}?`)
+        : true;
+      if (!confirmed) return;
+      this.decidingId = o.orderId;
+      this.error = '';
+      try {
+        const updated = await api.post(`/api/orders/${o.orderId}/${action}`);
+        // Refresh both detail and list views without a full reload.
+        if (this.order && this.order.orderId === o.orderId) {
+          this.order = updated;
+        }
+        const idx = this.orders.findIndex((x) => x.orderId === o.orderId);
+        if (idx !== -1) {
+          this.orders.splice(idx, 1, updated);
+        }
+      } catch (err) {
+        this.error = err instanceof ApiError
+          ? `Could not ${action} order #${o.orderId}: ${err.message}`
+          : `Could not ${action} order #${o.orderId}.`;
+      } finally {
+        this.decidingId = null;
+      }
     },
     async cancelOrder(o) {
       if (!o || this.cancellingId !== null) return;
@@ -333,17 +409,34 @@ export default {
   border-top: 1px dashed var(--qb-border);
 }
 
-.cancel-btn {
-  background: transparent;
-  color: #9b1c1c;
-  border: 1px solid #f8b4b4;
+.cancel-btn,
+.reject-btn,
+.accept-btn {
   border-radius: 4px;
   padding: 0.3rem 0.7rem;
   font-size: 0.85rem;
   cursor: pointer;
 }
-.cancel-btn:hover:not(:disabled) { background: #fde8e8; }
-.cancel-btn:disabled { opacity: 0.6; cursor: not-allowed; }
+
+.cancel-btn,
+.reject-btn {
+  background: transparent;
+  color: #9b1c1c;
+  border: 1px solid #f8b4b4;
+}
+.cancel-btn:hover:not(:disabled),
+.reject-btn:hover:not(:disabled) { background: #fde8e8; }
+
+.accept-btn {
+  background: #166534;
+  color: #fff;
+  border: 1px solid #166534;
+}
+.accept-btn:hover:not(:disabled) { background: #14532d; }
+
+.cancel-btn:disabled,
+.reject-btn:disabled,
+.accept-btn:disabled { opacity: 0.6; cursor: not-allowed; }
 
 .btn-link {
   background: transparent;

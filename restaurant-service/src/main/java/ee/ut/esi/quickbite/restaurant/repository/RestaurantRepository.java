@@ -24,9 +24,13 @@ public interface RestaurantRepository extends JpaRepository<Restaurant, UUID> {
 
     @Query("""
         SELECT r FROM Restaurant r
-        WHERE (cast(:city as string) IS NULL
+        WHERE (:ownerId IS NULL OR r.ownerId = :ownerId)
+          AND (cast(:city as string) IS NULL
                OR LOWER(r.location.city) = LOWER(cast(:city as string)))
           AND (:open IS NULL OR r.open = :open)
         """)
-    Page<Restaurant> search(@Param("city") String city, @Param("open") Boolean open, Pageable pageable);
+    Page<Restaurant> search(@Param("ownerId") UUID ownerId,
+                            @Param("city") String city,
+                            @Param("open") Boolean open,
+                            Pageable pageable);
 }

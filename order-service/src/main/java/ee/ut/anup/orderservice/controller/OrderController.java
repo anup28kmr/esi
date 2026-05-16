@@ -14,6 +14,7 @@ import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
 import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
@@ -95,6 +96,52 @@ public class OrderController {
     public ResponseEntity<OrderResponse> updateOrderStatus(@PathVariable Long id, @RequestBody StatusUpdateRequest request) {
         log.info("PATCH /orders/{}/status status='{}'", id, request.status());
         return ResponseEntity.ok(orderService.updateOrderStatus(id, request));
+    }
+
+    @Operation(
+            summary = "Accept an order",
+            description = "Restaurant owner accepts a CONFIRMED order. Verifies the actor owns the restaurant."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Order accepted",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Actor does not own the restaurant",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Order not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Order is not in CONFIRMED state",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PreAuthorize("hasAnyRole('RestaurantOwner', 'Admin')")
+    @PostMapping("/{id}/accept")
+    public ResponseEntity<OrderResponse> acceptOrder(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        log.info("POST /orders/{}/accept actor={}", id, principal.userId());
+        return ResponseEntity.ok(orderService.acceptOrder(id, principal.userId()));
+    }
+
+    @Operation(
+            summary = "Reject an order",
+            description = "Restaurant owner rejects a CONFIRMED order. Verifies the actor owns the restaurant."
+    )
+    @ApiResponses({
+            @ApiResponse(responseCode = "200", description = "Order rejected",
+                    content = @Content(schema = @Schema(implementation = OrderResponse.class))),
+            @ApiResponse(responseCode = "403", description = "Actor does not own the restaurant",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "404", description = "Order not found",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class))),
+            @ApiResponse(responseCode = "409", description = "Order is not in CONFIRMED state",
+                    content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
+    })
+    @PreAuthorize("hasAnyRole('RestaurantOwner', 'Admin')")
+    @PostMapping("/{id}/reject")
+    public ResponseEntity<OrderResponse> rejectOrder(
+            @PathVariable Long id,
+            @AuthenticationPrincipal AuthenticatedUser principal) {
+        log.info("POST /orders/{}/reject actor={}", id, principal.userId());
+        return ResponseEntity.ok(orderService.rejectOrder(id, principal.userId()));
     }
 
     @Operation(

@@ -46,9 +46,16 @@
           id="delivery-address"
           v-model.trim="deliveryAddress"
           type="text"
-          placeholder="Street, city"
+          placeholder="Street, city, postal code"
           :disabled="placing"
         />
+        <p v-if="usingProfileAddress" class="muted small">
+          Using your saved address.
+          <router-link :to="{ name: 'user-profile' }" class="btn-link">Change in profile</router-link>
+        </p>
+        <p v-else-if="!profileAddressText" class="muted small">
+          Tip: add an address to <router-link :to="{ name: 'user-profile' }" class="btn-link">your profile</router-link> to skip this next time.
+        </p>
       </div>
       <div class="totals">
         <span>Total</span>
@@ -72,6 +79,17 @@ import { api, ApiError } from '../api/client.js';
 import { getCurrentUser } from '../auth/token.js';
 import { useCart } from '../composables/useCart.js';
 
+// user-service stores address as { street, city, postalCode, label, isDefault }
+// (see UserView's payload). Flatten the three location parts into the single
+// string the order-service contract expects on deliveryAddress.
+function formatProfileAddress(addr) {
+  if (!addr || typeof addr !== 'object') return '';
+  const parts = [addr.street, addr.city, addr.postalCode]
+    .map((p) => (p == null ? '' : String(p).trim()))
+    .filter(Boolean);
+  return parts.join(', ');
+}
+
 export default {
   name: 'CartView',
   setup() {
@@ -79,7 +97,15 @@ export default {
     return { cart, subtotal, currency, setQuantity, removeItem, clear };
   },
   data() {
-    return { placing: false, error: '', deliveryAddress: '' };
+    return {
+      placing: false,
+      error: '',
+      deliveryAddress: '',
+      // Snapshot of the profile address at mount so we can tell whether
+      // `deliveryAddress` still matches the saved one (for the "Using your
+      // saved address" hint) without re-reading localStorage on every render.
+      profileAddressText: ''
+    };
   },
   computed: {
     canSignedIn() {
@@ -93,6 +119,18 @@ export default {
           && this.cart.restaurantId
           && this.deliveryAddress
       );
+    },
+    usingProfileAddress() {
+      return Boolean(this.profileAddressText)
+        && this.deliveryAddress === this.profileAddressText;
+    }
+  },
+  created() {
+    const user = getCurrentUser();
+    const formatted = formatProfileAddress(user && user.address);
+    if (formatted) {
+      this.profileAddressText = formatted;
+      this.deliveryAddress = formatted;
     }
   },
   methods: {

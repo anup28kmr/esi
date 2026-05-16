@@ -29,6 +29,7 @@ import ee.ut.anup.orderservice.repository.OrderRepository;
 import ee.ut.anup.orderservice.service.OrderService;
 import lombok.AllArgsConstructor;
 import lombok.extern.slf4j.Slf4j;
+import org.springframework.security.access.AccessDeniedException;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
@@ -263,6 +264,63 @@ public class OrderServiceImpl implements OrderService {
         order.setStatus(OrderServiceConstants.STATUS_CANCELLED);
         orderRepository.save(order);
         log.info("order cancelled orderId={}", id);
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse acceptOrder(Long id, UUID actorUserId) {
+        return transitionByOwner(id, actorUserId, OrderServiceConstants.STATUS_ACCEPTED, "accept");
+    }
+
+    @Override
+    @Transactional
+    public OrderResponse rejectOrder(Long id, UUID actorUserId) {
+        return transitionByOwner(id, actorUserId, OrderServiceConstants.STATUS_REJECTED, "reject");
+    }
+
+    /**
+     * Shared accept/reject logic. Owners can only act on CONFIRMED orders --
+     * earlier statuses haven't completed payment+delivery, and later statuses
+     * mean the kitchen has already moved on. Ownership is verified by
+     * looking up the restaurant via restaurant-service, which itself denies
+     * non-owners with 403 (returned to our RestaurantClient as empty
+     * Optional); we additionally double-check the ownerId on the response
+     * to defend against any future relaxation of that endpoint.
+     */
+    private OrderResponse transitionByOwner(Long id, UUID actorUserId, String targetStatus, String action) {
+        Order order = orderRepository.findById(id)
+                .orElseThrow(() -> new ResourceNotFoundException("Order not found with id: " + id));
+
+        if (!OrderServiceConstants.STATUS_CONFIRMED.equalsIgnoreCase(order.getStatus())) {
+            log.warn("{} rejected orderId={} currentStatus={} (only CONFIRMED is actionable)",
+                    action, id, order.getStatus());
+            throw new IllegalStateException(
+                    "Only CONFIRMED orders can be " + targetStatus.toLowerCase()
+                            + " (currentStatus=" + order.getStatus() + ")");
+        }
+
+        UUID restaurantUuid;
+        try {
+            restaurantUuid = UUID.fromString(order.getRestaurantId());
+        } catch (IllegalArgumentException e) {
+            // Existing order data: malformed restaurantId -- we can't check
+            // ownership, so refuse rather than guess.
+            throw new IllegalStateException("Order has malformed restaurantId: " + order.getRestaurantId());
+        }
+        var restaurant = restaurantClient.getRestaurant(restaurantUuid)
+                .orElseThrow(() -> new AccessDeniedException(
+                        "Cannot " + action + " order " + id + ": restaurant lookup failed or access denied"));
+        if (restaurant.ownerId() == null || !restaurant.ownerId().equals(actorUserId)) {
+            log.warn("{} denied orderId={} restaurantId={} actor={} ownerId={}",
+                    action, id, restaurantUuid, actorUserId, restaurant.ownerId());
+            throw new AccessDeniedException(
+                    "User " + actorUserId + " does not own restaurant " + restaurantUuid);
+        }
+
+        order.setStatus(targetStatus);
+        Order saved = orderRepository.save(order);
+        log.info("order {} -> {} orderId={} actor={}", action, targetStatus, id, actorUserId);
+        return orderMapper.mapToResponse(saved);
     }
 
     @Override

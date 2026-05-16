@@ -131,7 +131,7 @@ class OrderServiceImplTest {
         when(restaurantClient.checkAvailability(RESTAURANT_ID)).thenReturn(Optional.of(
                 new AvailabilityResponse(RESTAURANT_ID, true, true, "10:00-22:00", Instant.now())));
         when(restaurantClient.getRestaurant(RESTAURANT_ID)).thenReturn(Optional.of(
-                new RestaurantSummaryResponse(RESTAURANT_ID, "Diner", "Tartu mnt 5", "Tallinn")));
+                new RestaurantSummaryResponse(RESTAURANT_ID, UUID.randomUUID(), "Diner", "Tartu mnt 5", "Tallinn")));
 
         ValidateMenuItemsResponse menuOk = new ValidateMenuItemsResponse(
                 true,
@@ -380,6 +380,86 @@ class OrderServiceImplTest {
 
         assertNotNull(response);
         assertEquals("ACCEPTED", response.status());
+    }
+
+    // ---- accept / reject ---------------------------------------------------
+
+    private static final UUID OWNER_ID = UUID.fromString("aaaaaaaa-aaaa-aaaa-aaaa-aaaaaaaaaaaa");
+    private static final UUID OTHER_OWNER_ID = UUID.fromString("bbbbbbbb-bbbb-bbbb-bbbb-bbbbbbbbbbbb");
+
+    private void stubConfirmedOrderOwnedBy(UUID ownerId) {
+        order.setStatus(OrderServiceConstants.STATUS_CONFIRMED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(restaurantClient.getRestaurant(RESTAURANT_ID)).thenReturn(Optional.of(
+                new RestaurantSummaryResponse(RESTAURANT_ID, ownerId, "Diner", "X", "Y")));
+        when(orderRepository.save(any(Order.class))).thenReturn(order);
+        when(orderMapper.mapToResponse(any(Order.class)))
+                .thenAnswer(inv -> orderResponse.withStatus(((Order) inv.getArgument(0)).getStatus()));
+    }
+
+    @Test
+    void acceptOrder_transitionsConfirmedToAccepted() {
+        stubConfirmedOrderOwnedBy(OWNER_ID);
+
+        OrderResponse response = orderService.acceptOrder(1L, OWNER_ID);
+
+        assertEquals(OrderServiceConstants.STATUS_ACCEPTED, response.status());
+        assertEquals(OrderServiceConstants.STATUS_ACCEPTED, order.getStatus());
+        verify(orderRepository).save(order);
+    }
+
+    @Test
+    void rejectOrder_transitionsConfirmedToRejected() {
+        stubConfirmedOrderOwnedBy(OWNER_ID);
+
+        OrderResponse response = orderService.rejectOrder(1L, OWNER_ID);
+
+        assertEquals(OrderServiceConstants.STATUS_REJECTED, response.status());
+        assertEquals(OrderServiceConstants.STATUS_REJECTED, order.getStatus());
+    }
+
+    @Test
+    void acceptOrder_rejectsNonOwner() {
+        stubConfirmedOrderOwnedBy(OWNER_ID);
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> orderService.acceptOrder(1L, OTHER_OWNER_ID));
+        verify(orderRepository, never()).save(any(Order.class));
+    }
+
+    @Test
+    void acceptOrder_failsWhenRestaurantLookupEmpty() {
+        order.setStatus(OrderServiceConstants.STATUS_CONFIRMED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+        when(restaurantClient.getRestaurant(RESTAURANT_ID)).thenReturn(Optional.empty());
+
+        assertThrows(org.springframework.security.access.AccessDeniedException.class,
+                () -> orderService.acceptOrder(1L, OWNER_ID));
+    }
+
+    @Test
+    void acceptOrder_rejectsWrongStatus() {
+        order.setStatus(OrderServiceConstants.STATUS_PLACED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> orderService.acceptOrder(1L, OWNER_ID));
+        verify(restaurantClient, never()).getRestaurant(any());
+    }
+
+    @Test
+    void rejectOrder_rejectsWrongStatus() {
+        order.setStatus(OrderServiceConstants.STATUS_ACCEPTED);
+        when(orderRepository.findById(1L)).thenReturn(Optional.of(order));
+
+        assertThrows(IllegalStateException.class, () -> orderService.rejectOrder(1L, OWNER_ID));
+    }
+
+    @Test
+    void acceptOrder_orderNotFound() {
+        when(orderRepository.findById(99L)).thenReturn(Optional.empty());
+
+        assertThrows(ResourceNotFoundException.class,
+                () -> orderService.acceptOrder(99L, OWNER_ID));
     }
 
     @Test

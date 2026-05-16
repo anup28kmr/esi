@@ -1,9 +1,6 @@
 <template>
   <section class="add-menu-item">
     <h1>Add a menu item</h1>
-    <p class="muted">
-      Posts to <code>POST /api/restaurants/{{ form.restaurantId || '{id}' }}/menu-items</code>.
-    </p>
 
     <form @submit.prevent="onSubmit" novalidate>
       <label for="restaurant">Restaurant</label>
