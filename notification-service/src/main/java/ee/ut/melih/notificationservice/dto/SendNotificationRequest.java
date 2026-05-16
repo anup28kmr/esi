@@ -9,4 +9,10 @@ import java.util.UUID;
 public record SendNotificationRequest(
     @NotNull UUID recipientId,
     @NotNull Channel channel,
-    @NotBlank @Size(max = 1024) String message) {}
+    @NotBlank @Size(max = 1024) String message,
+    @Size(max = 64) String eventType) {
+
+  public SendNotificationRequest(UUID recipientId, Channel channel, String message) {
+    this(recipientId, channel, message, null);
+  }
+}

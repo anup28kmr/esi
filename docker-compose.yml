@@ -322,6 +322,7 @@ services:
   notification-service:
     build: ./notification-service
     environment:
+      <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
     ports:
       - "8087:8087"
