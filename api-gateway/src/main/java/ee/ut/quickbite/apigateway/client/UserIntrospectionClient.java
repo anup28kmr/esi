@@ -35,10 +35,8 @@ public class UserIntrospectionClient {
 
     public UserIntrospectionClient(
         RestClient.Builder builder,
-        @Value("${USER_SERVICE_HOST:user-service}") String host,
-        @Value("${USER_SERVICE_PORT:7000}") int port
+        @Value("${USER_SERVICE_URL:http://user-service:7000}") String baseUrl
     ) {
-        String baseUrl = "http://" + host + ":" + port;
         this.http = builder.baseUrl(baseUrl).build();
         log.info("UserIntrospectionClient base-url={}", baseUrl);
     }

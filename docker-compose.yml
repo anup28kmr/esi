@@ -73,12 +73,24 @@ services:
       # so the UserClient default of http://localhost:7000 fails with an
       # I/O error. Use the service name on the quickbite-net bridge.
       USER_SERVICE_URL: http://user-service:7000
+      RESTAURANT_SERVICE_URL: http://restaurant-service:8081
+      MENU_SERVICE_URL: http://menu-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8085
+      DELIVERY_SERVICE_URL: http://delivery-service:8086
     ports:
       - "7001:7001"
     depends_on:
       postgres-order:
         condition: service_healthy
       user-service:
+        condition: service_started
+      restaurant-service:
+        condition: service_started
+      menu-service:
+        condition: service_started
+      payment-service:
+        condition: service_started
+      delivery-service:
         condition: service_started
     networks: [quickbite-net]
 
@@ -87,20 +99,13 @@ services:
     build: ./api-gateway
     environment:
       SPRING_PROFILES_ACTIVE: docker
-      USER_SERVICE_HOST: user-service
-      USER_SERVICE_PORT: 7000
-      ORDER_SERVICE_HOST: order-service
-      ORDER_SERVICE_PORT: 7001
-      RESTAURANT_SERVICE_HOST: restaurant-service
-      RESTAURANT_SERVICE_PORT: 8081
-      MENU_SERVICE_HOST: menu-service
-      MENU_SERVICE_PORT: 8082
-      PAYMENT_SERVICE_HOST: payment-service
-      PAYMENT_SERVICE_PORT: 8085
-      DELIVERY_SERVICE_HOST: delivery-service
-      DELIVERY_SERVICE_PORT: 8086
-      NOTIFICATION_SERVICE_HOST: notification-service
-      NOTIFICATION_SERVICE_PORT: 8087
+      USER_SERVICE_URL: http://user-service:7000
+      ORDER_SERVICE_URL: http://order-service:7001
+      RESTAURANT_SERVICE_URL: http://restaurant-service:8081
+      MENU_SERVICE_URL: http://menu-service:8082
+      PAYMENT_SERVICE_URL: http://payment-service:8085
+      DELIVERY_SERVICE_URL: http://delivery-service:8086
+      NOTIFICATION_SERVICE_URL: http://notification-service:8087
     ports:
       - "9090:8080"
     depends_on:

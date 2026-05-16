@@ -1,10 +1,6 @@
 <template>
   <section class="add-restaurant">
     <h1>Add a restaurant</h1>
-    <p class="muted">
-      Posts to <code>POST /api/restaurants</code>. Requires the
-      <code>RestaurantOwner</code> or <code>Admin</code> role on your token.
-    </p>
 
     <form @submit.prevent="onSubmit" novalidate>
       <label for="name">Name</label>

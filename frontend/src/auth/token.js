@@ -116,3 +116,7 @@ export function canManageRestaurants() {
   const role = readRole();
   return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
 }
+
+export function isRestaurantOwner() {
+  return readRole() === 'RESTAURANT_OWNER';
+}

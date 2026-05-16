@@ -63,12 +63,26 @@ public class RestaurantService {
 
     @Transactional(readOnly = true)
     public RestaurantResponse findById(UUID id) {
-        return RestaurantResponse.from(requireRestaurant(id));
+        Restaurant r = requireRestaurant(id);
+        currentUser.current().ifPresent(actor -> {
+            if (SecurityRoles.RESTAURANT_OWNER.equals(actor.role())
+                && !actor.userId().equals(r.getOwnerId())) {
+                log.warn("ownership denial actor={} role={} endpoint=GET /restaurants/{} ownerId={}",
+                    actor.userId(), actor.role(), r.getRestaurantId(), r.getOwnerId());
+                throw new AccessDeniedException(
+                    "User " + actor.userId() + " does not own restaurant " + r.getRestaurantId());
+            }
+        });
+        return RestaurantResponse.from(r);
     }
 
     @Transactional(readOnly = true)
     public Page<RestaurantResponse> search(String city, Boolean isOpen, Pageable pageable) {
-        return restaurants.search(city, isOpen, pageable).map(RestaurantResponse::from);
+        UUID ownerFilter = currentUser.current()
+            .filter(u -> SecurityRoles.RESTAURANT_OWNER.equals(u.role()))
+            .map(AuthenticatedUser::userId)
+            .orElse(null);
+        return restaurants.search(ownerFilter, city, isOpen, pageable).map(RestaurantResponse::from);
     }
 
     @Transactional

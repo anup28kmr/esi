@@ -1,7 +1,6 @@
 <template>
   <section class="signup">
     <h1>Create your account</h1>
-    <p class="muted">Posts to <code>POST /api/users</code> then sends you to the sign-in page.</p>
 
     <form @submit.prevent="onSubmit">
       <label for="email">Email</label>

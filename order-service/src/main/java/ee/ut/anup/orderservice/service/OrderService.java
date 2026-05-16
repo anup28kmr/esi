@@ -13,6 +13,8 @@ public interface OrderService {
     OrderResponse getOrder(Long id);
     void cancelOrder(Long id);
     OrderResponse updateOrderStatus(Long id, StatusUpdateRequest request);
+    OrderResponse acceptOrder(Long id, UUID actorUserId);
+    OrderResponse rejectOrder(Long id, UUID actorUserId);
     List<OrderResponse> getOrdersByCustomer(UUID customerId);
     List<OrderResponse> getOrdersByRestaurant(String restaurantId);
     List<OrderItemResponse> getOrderItems(Long id);

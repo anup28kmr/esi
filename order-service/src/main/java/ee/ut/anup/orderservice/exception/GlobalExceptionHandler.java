@@ -76,6 +76,40 @@ public class GlobalExceptionHandler  extends ResponseEntityExceptionHandler {
         return new ResponseEntity<>(errorResponseDTO, HttpStatus.BAD_REQUEST);
     }
 
+    /**
+     * Raised by the service layer when an action is rejected because the
+     * order is in the wrong state -- e.g., an owner tries to accept an order
+     * that was already CONFIRMED-then-REJECTED, or cancel one that already
+     * moved on. 409 is the right code: the request is valid, but the
+     * resource's current state doesn't permit the transition.
+     */
+    @ExceptionHandler(IllegalStateException.class)
+    public ResponseEntity<ErrorResponseDto> handleIllegalState(IllegalStateException exception,
+                                                               WebRequest webRequest) {
+        log.debug("409 path={} reason={}", webRequest.getDescription(false), exception.getMessage());
+        ErrorResponseDto errorResponseDTO = new ErrorResponseDto(
+                webRequest.getDescription(false),
+                HttpStatus.CONFLICT,
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponseDTO, HttpStatus.CONFLICT);
+    }
+
+    @ExceptionHandler(org.springframework.security.access.AccessDeniedException.class)
+    public ResponseEntity<ErrorResponseDto> handleAccessDenied(
+            org.springframework.security.access.AccessDeniedException exception,
+            WebRequest webRequest) {
+        log.debug("403 path={} reason={}", webRequest.getDescription(false), exception.getMessage());
+        ErrorResponseDto errorResponseDTO = new ErrorResponseDto(
+                webRequest.getDescription(false),
+                HttpStatus.FORBIDDEN,
+                exception.getMessage(),
+                LocalDateTime.now()
+        );
+        return new ResponseEntity<>(errorResponseDTO, HttpStatus.FORBIDDEN);
+    }
+
     @ExceptionHandler(CustomerAlreadyExistsException.class)
     public ResponseEntity<ErrorResponseDto> handleCustomerAlreadyExistsException(CustomerAlreadyExistsException exception,
                                                                                  WebRequest webRequest){
