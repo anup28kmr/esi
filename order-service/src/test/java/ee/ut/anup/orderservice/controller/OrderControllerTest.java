@@ -72,7 +72,7 @@ class OrderControllerTest {
 
     @Test
     void placeOrder_ShouldReturnCreated() throws Exception {
-        PlaceOrderRequest request = new PlaceOrderRequest("rest1", Collections.emptyList());
+        PlaceOrderRequest request = new PlaceOrderRequest("rest1", Collections.emptyList(), "addr");
         when(orderService.placeOrder(eq(CUSTOMER_ID), any(PlaceOrderRequest.class))).thenReturn(orderResponse);
 
         mockMvc.perform(post("/orders")

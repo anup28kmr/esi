@@ -40,6 +40,16 @@
     </ul>
 
     <div v-if="cart.items.length > 0" class="summary">
+      <div class="address">
+        <label for="delivery-address">Delivery address</label>
+        <input
+          id="delivery-address"
+          v-model.trim="deliveryAddress"
+          type="text"
+          placeholder="Street, city"
+          :disabled="placing"
+        />
+      </div>
       <div class="totals">
         <span>Total</span>
         <strong>{{ subtotal.toFixed(2) }} {{ currency }}</strong>
@@ -51,7 +61,7 @@
         </button>
       </div>
       <p v-if="!canPlace && !placing" class="muted small">
-        Sign in to place orders.
+        {{ canSignedIn ? 'Enter a delivery address to place the order.' : 'Sign in to place orders.' }}
       </p>
     </div>
   </section>
@@ -69,12 +79,20 @@ export default {
     return { cart, subtotal, currency, setQuantity, removeItem, clear };
   },
   data() {
-    return { placing: false, error: '' };
+    return { placing: false, error: '', deliveryAddress: '' };
   },
   computed: {
-    canPlace() {
+    canSignedIn() {
       const user = getCurrentUser();
-      return Boolean(user && user.userId && this.cart.items.length > 0 && this.cart.restaurantId);
+      return Boolean(user && user.userId);
+    },
+    canPlace() {
+      return Boolean(
+        this.canSignedIn
+          && this.cart.items.length > 0
+          && this.cart.restaurantId
+          && this.deliveryAddress
+      );
     }
   },
   methods: {
@@ -88,14 +106,20 @@ export default {
         this.error = 'You must be signed in to place an order.';
         return;
       }
+      if (!this.deliveryAddress) {
+        this.error = 'Enter a delivery address before placing the order.';
+        return;
+      }
       this.placing = true;
       try {
         // order-service derives the customer id from the JWT in the
         // Authorization header (attached by apiFetch automatically).
-        // Body shape per OrderController: restaurantId + items[{ menuItemId,
-        // name, unitPrice, quantity }]. The server computes totalAmount.
+        // Body shape per OrderController: restaurantId + items[] +
+        // deliveryAddress. The server validates items against menu-service
+        // and computes totalAmount itself; client unitPrice is ignored.
         const body = {
           restaurantId: this.cart.restaurantId,
+          deliveryAddress: this.deliveryAddress,
           items: this.cart.items.map((i) => ({
             menuItemId: i.menuItemId,
             name: i.name,
@@ -184,6 +208,15 @@ export default {
   background: #fff;
   border: 1px solid var(--qb-border);
   border-radius: 6px;
+}
+
+.address { display: flex; flex-direction: column; gap: 0.3rem; margin-bottom: 0.75rem; }
+.address label { font-size: 0.85rem; color: var(--qb-muted); }
+.address input {
+  padding: 0.45rem 0.6rem;
+  border: 1px solid var(--qb-border);
+  border-radius: 4px;
+  font: inherit;
 }
 
 .totals {

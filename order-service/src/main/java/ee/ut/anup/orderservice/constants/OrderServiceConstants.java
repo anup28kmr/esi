@@ -8,9 +8,12 @@ public class OrderServiceConstants {
 
     public static final String STATUS_COMPLETED = "COMPLETED";
     public static final String STATUS_PLACED = "PLACED";
+    public static final String STATUS_PAID = "PAID";
     public static final String STATUS_CONFIRMED = "CONFIRMED";
     public static final String STATUS_PREPARED = "PREPARED";
     public static final String STATUS_DELIVERED = "DELIVERED";
     public static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
+
+    public static final String PAYMENT_STATUS_COMPLETED = "COMPLETED";
 
 }
