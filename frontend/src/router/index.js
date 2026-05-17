@@ -83,7 +83,8 @@ const routes = [
   {
     path: '/deliveries',
     name: 'deliveries',
-    component: DeliveriesView
+    component: DeliveriesView,
+    meta: { requiresAuth: true }
   },
   {
     path: '/profile',

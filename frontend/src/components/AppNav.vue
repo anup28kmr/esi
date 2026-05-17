@@ -13,7 +13,8 @@
           <span v-if="cartCount > 0" class="cart-dot">{{ cartCount > 99 ? '99+' : cartCount }}</span>
         </RouterLink>
       </li>
-      <li v-if="authed"><RouterLink to="/orders">Orders</RouterLink></li>
+      <li v-if="authed && !isDriver"><RouterLink to="/orders">Orders</RouterLink></li>
+      <li v-if="authed && isDriver"><RouterLink to="/deliveries">Deliveries</RouterLink></li>
       <li v-if="authed" class="notif-link">
         <RouterLink to="/notifications">
           Notifications
@@ -78,6 +79,11 @@ export default {
       authStateVersion.value;
       const role = readRole();
       return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
+    },
+    isDriver() {
+      // eslint-disable-next-line no-unused-expressions
+      authStateVersion.value;
+      return readRole() === 'DRIVER';
     },
     displayName() {
       // Keep the label in sync when the current-user payload changes.
