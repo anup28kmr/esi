@@ -23,6 +23,26 @@ spring:
   flyway:
     enabled: true
     locations: classpath:db/migration
+  # Consumer-only Kafka config. delivery-service publishes `delivery-events`
+  # as raw JSON (StringSerializer), so we read it as String and parse with
+  # a locally-constructed Jackson ObjectMapper inside the listener -- avoids
+  # the Boot 4 / Jackson 3 namespace split that breaks DI of the legacy
+  # com.fasterxml.jackson ObjectMapper in this service.
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
+    consumer:
+      group-id: order-service
+      auto-offset-reset: earliest
+      key-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+      value-deserializer: org.apache.kafka.common.serialization.StringDeserializer
+    listener:
+      missing-topics-fatal: false
+
+# Feature flag for the Kafka listener. Disable in unit/integration tests
+# that don't want a broker connection by setting app.kafka.enabled=false.
+app:
+  kafka:
+    enabled: ${APP_KAFKA_ENABLED:true}
 
 server:
   port: 7001

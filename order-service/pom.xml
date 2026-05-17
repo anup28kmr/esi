@@ -94,6 +94,24 @@
             <artifactId>lombok</artifactId>
             <optional>true</optional>
         </dependency>
+
+        <!-- Consumes `delivery-events` from Kafka to mirror PICKED_UP /
+             DELIVERED into the order row. delivery-service publishes raw
+             JSON via StringSerializer, so we deserialize as String and
+             parse with a locally-constructed Jackson ObjectMapper (see
+             also: Boot 4 + Jackson 3 namespace split).
+             Boot 4 splits auto-config per tech (same shape as
+             spring-boot-flyway above); without spring-boot-kafka the
+             @KafkaListener bean is silently ignored at startup. -->
+        <dependency>
+            <groupId>org.springframework.boot</groupId>
+            <artifactId>spring-boot-kafka</artifactId>
+        </dependency>
+        <dependency>
+            <groupId>org.springframework.kafka</groupId>
+            <artifactId>spring-kafka</artifactId>
+        </dependency>
+
         <dependency>
             <groupId>org.springframework.boot</groupId>
             <artifactId>spring-boot-starter-test</artifactId>

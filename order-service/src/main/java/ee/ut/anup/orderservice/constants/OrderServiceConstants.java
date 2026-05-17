@@ -12,6 +12,7 @@ public class OrderServiceConstants {
     public static final String STATUS_CONFIRMED = "CONFIRMED";
     public static final String STATUS_REJECTED = "REJECTED";
     public static final String STATUS_PREPARED = "PREPARED";
+    public static final String STATUS_PICKED_UP = "PICKED_UP";
     public static final String STATUS_DELIVERED = "DELIVERED";
     public static final String STATUS_IN_PROGRESS = "IN_PROGRESS";
 

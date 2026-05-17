@@ -1,0 +1,7 @@
+# Test overrides. The @SpringBootTest contextLoads check would otherwise
+# start the DeliveryEventConsumer listener container -- no Kafka broker
+# is running locally during unit tests, so disable it via the same flag
+# the consumer guards on.
+app:
+  kafka:
+    enabled: false
