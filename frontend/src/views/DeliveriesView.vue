@@ -25,6 +25,7 @@
     </form>
 
     <div v-if="error" class="error-banner">{{ error }}</div>
+    <div v-if="claimError" class="error-banner">{{ claimError }}</div>
 
     <div v-if="loading" class="muted" role="status">Loading deliveries…</div>
 
@@ -32,34 +33,47 @@
       No deliveries found.
     </div>
 
-    <ul v-else class="cards">
-      <li v-for="d in deliveries" :key="d.deliveryId" class="card">
-        <div class="card-head">
-          <span class="delivery-id">{{ shortId(d.deliveryId) }}</span>
-          <span :class="['badge', statusClass(d.status)]">{{ d.status }}</span>
-        </div>
-        <p class="muted addr">
-          <strong>From:</strong> {{ d.pickupAddress }}
-        </p>
-        <p class="muted addr">
-          <strong>To:</strong> {{ d.deliveryAddress }}
-        </p>
-        <p v-if="d.driverId" class="muted">
-          Driver: {{ shortId(d.driverId) }}
-        </p>
-        <p v-if="d.actualDeliveryTime" class="muted">
-          Delivered: {{ formatTime(d.actualDeliveryTime) }}
-        </p>
-        <p class="muted created">
-          Created: {{ formatTime(d.createdAt) }}
-        </p>
-      </li>
-    </ul>
+    <div v-else class="table-wrap">
+      <table>
+        <thead>
+          <tr>
+            <th>ID</th>
+            <th>Pickup Address</th>
+            <th>Delivery Address</th>
+            <th>Status</th>
+            <th v-if="isDriver">Action</th>
+          </tr>
+        </thead>
+        <tbody>
+          <tr v-for="d in deliveries" :key="d.deliveryId">
+            <td class="id-cell">{{ shortId(d.deliveryId) }}</td>
+            <td>{{ d.pickupAddress }}</td>
+            <td>{{ d.deliveryAddress }}</td>
+            <td>
+              <span :class="['badge', statusClass(d.status)]">{{ d.status }}</span>
+            </td>
+            <td v-if="isDriver">
+              <button
+                v-if="d.status === 'PENDING' && !d.driverId"
+                class="btn-take"
+                :disabled="claiming === d.deliveryId"
+                @click="claim(d.deliveryId)"
+              >
+                {{ claiming === d.deliveryId ? 'Taking…' : 'Take' }}
+              </button>
+              <span v-else-if="d.driverId" class="taken-label">Taken</span>
+              <span v-else class="muted">—</span>
+            </td>
+          </tr>
+        </tbody>
+      </table>
+    </div>
   </section>
 </template>
 
 <script>
 import { api, ApiError } from '../api/client.js';
+import { readRole } from '../auth/token.js';
 
 export default {
   name: 'DeliveriesView',
@@ -68,8 +82,15 @@ export default {
       deliveries: [],
       loading: false,
       error: '',
-      statusFilter: ''
+      claimError: '',
+      statusFilter: '',
+      claiming: null
     };
+  },
+  computed: {
+    isDriver() {
+      return readRole() === 'DRIVER';
+    }
   },
   mounted() {
     this.load();
@@ -91,16 +112,25 @@ export default {
         this.loading = false;
       }
     },
+    async claim(deliveryId) {
+      this.claimError = '';
+      this.claiming = deliveryId;
+      try {
+        const updated = await api.post(`/api/deliveries/${deliveryId}/claim`);
+        const idx = this.deliveries.findIndex(d => d.deliveryId === deliveryId);
+        if (idx !== -1) this.deliveries[idx] = updated;
+      } catch (err) {
+        this.claimError = err instanceof ApiError ? err.message : 'Could not claim delivery.';
+      } finally {
+        this.claiming = null;
+      }
+    },
     reset() {
       this.statusFilter = '';
       this.load();
     },
     shortId(uuid) {
       return uuid ? uuid.slice(0, 8) + '…' : '—';
-    },
-    formatTime(ts) {
-      if (!ts) return '—';
-      return new Date(ts).toLocaleString();
     },
     statusClass(status) {
       const map = {
@@ -151,38 +181,55 @@ export default {
   text-align: center;
 }
 
-.cards {
-  list-style: none;
-  margin: 0;
-  padding: 0;
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 1rem;
+.table-wrap {
+  overflow-x: auto;
 }
 
-.card {
+table {
+  width: 100%;
+  border-collapse: collapse;
   background: #fff;
   border: 1px solid var(--qb-border);
   border-radius: 6px;
-  padding: 1rem;
+  overflow: hidden;
 }
 
-.card-head {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 0.5rem;
-  margin-bottom: 0.5rem;
+thead {
+  background: #f8fafc;
 }
 
-.delivery-id {
+th {
+  text-align: left;
+  padding: 0.65rem 1rem;
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--qb-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+  border-bottom: 1px solid var(--qb-border);
+}
+
+td {
+  padding: 0.75rem 1rem;
+  border-bottom: 1px solid var(--qb-border);
+  font-size: 0.9rem;
+  vertical-align: middle;
+}
+
+tbody tr:last-child td {
+  border-bottom: none;
+}
+
+tbody tr:hover {
+  background: #f8fafc;
+}
+
+.id-cell {
   font-weight: 600;
   color: var(--qb-accent);
-  font-size: 0.9rem;
+  font-size: 0.85rem;
+  white-space: nowrap;
 }
-
-.addr { font-size: 0.9rem; margin: 0.2rem 0; }
-.created { font-size: 0.8rem; margin-top: 0.5rem; }
 
 .badge {
   font-size: 0.72rem;
@@ -196,6 +243,27 @@ export default {
 .badge.transit   { background: #ffedd5; color: #9a3412; }
 .badge.delivered { background: #dcfce7; color: #166534; }
 .badge.failed    { background: #fee2e2; color: #991b1b; }
+
+.btn-take {
+  padding: 0.3rem 0.85rem;
+  background: var(--qb-accent);
+  color: #fff;
+  border: none;
+  border-radius: 4px;
+  cursor: pointer;
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+.btn-take:disabled {
+  opacity: 0.6;
+  cursor: not-allowed;
+}
+
+.taken-label {
+  font-size: 0.8rem;
+  color: var(--qb-muted);
+  font-style: italic;
+}
 
 .btn-link {
   background: transparent;

@@ -2,6 +2,7 @@ package ee.ut.ege.deliveryservice.controller;
 
 import ee.ut.ege.deliveryservice.domain.DeliveryStatus;
 import ee.ut.ege.deliveryservice.dto.*;
+import ee.ut.ege.deliveryservice.security.AuthenticatedUser;
 import ee.ut.ege.deliveryservice.service.DeliveryService;
 import io.swagger.v3.oas.annotations.Operation;
 import io.swagger.v3.oas.annotations.tags.Tag;
@@ -9,6 +10,8 @@ import jakarta.validation.Valid;
 import lombok.RequiredArgsConstructor;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
+import org.springframework.security.access.prepost.PreAuthorize;
+import org.springframework.security.core.annotation.AuthenticationPrincipal;
 import org.springframework.web.bind.annotation.*;
 
 import java.util.List;
@@ -72,5 +75,14 @@ public class DeliveryController {
     @Operation(summary = "Cancel an active delivery")
     public ResponseEntity<DeliveryResponse> cancelDelivery(@PathVariable UUID id) {
         return ResponseEntity.ok(deliveryService.cancelDelivery(id));
+    }
+
+    @PostMapping("/{id}/claim")
+    @PreAuthorize("hasRole('Driver')")
+    @Operation(summary = "Driver self-assigns a PENDING delivery — reads driverId from the JWT")
+    public ResponseEntity<DeliveryResponse> claimDelivery(
+            @PathVariable UUID id,
+            @AuthenticationPrincipal AuthenticatedUser driver) {
+        return ResponseEntity.ok(deliveryService.claimDelivery(id, driver.userId()));
     }
 }

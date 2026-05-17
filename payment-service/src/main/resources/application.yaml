@@ -13,13 +13,12 @@ spring:
     properties:
       hibernate:
         dialect: org.hibernate.dialect.PostgreSQLDialect
+  kafka:
+    bootstrap-servers: ${KAFKA_BOOTSTRAP_SERVERS:localhost:9092}
 
 server:
   port: 8085
 
-# Shared JWT signing config. Defaults match user-service so a fresh checkout
-# works without env-var setup; docker-compose injects production values via
-# the x-jwt-env anchor.
 jwt:
   secret: ${JWT_SECRET:dGVzdC1zZWNyZXQtZm9yLWRldi1vbmx5LWRvLW5vdC11c2UtaW4tcHJvZC0xMjM0NTY=}
   issuer: ${JWT_ISSUER:quickbite-user-service}

@@ -78,10 +78,44 @@ public class DeliveryService {
     }
 
     @Transactional(readOnly = true)
+    public DeliveryResponse getActiveDeliveryForDriver(UUID driverId) {
+        List<DeliveryStatus> activeStatuses = List.of(
+                DeliveryStatus.ASSIGNED, DeliveryStatus.PICKED_UP, DeliveryStatus.IN_TRANSIT);
+        Delivery delivery = deliveryRepository
+                .findFirstByDriverIdAndStatusIn(driverId, activeStatuses)
+                .orElseThrow(() -> new DeliveryNotFoundException(
+                        "No active delivery found for driver: " + driverId));
+        return toResponse(delivery);
+    }
+
+    @Transactional(readOnly = true)
     public List<DeliveryResponse> getDeliveriesByStatus(DeliveryStatus status) {
         return deliveryRepository.findByStatus(status).stream()
                 .map(this::toResponse)
                 .collect(Collectors.toList());
+    }
+
+    @Transactional
+    public DeliveryResponse claimDelivery(UUID deliveryId, UUID driverId) {
+        Delivery delivery = findById(deliveryId);
+
+        if (delivery.getStatus() != DeliveryStatus.PENDING) {
+            throw new InvalidDeliveryStateException(
+                    "Only PENDING deliveries can be claimed, current status: "
+                    + delivery.getStatus());
+        }
+        if (delivery.getDriverId() != null) {
+            throw new InvalidDeliveryStateException(
+                    "Delivery already claimed by another driver");
+        }
+
+        delivery.setDriverId(driverId);
+        delivery.setStatus(DeliveryStatus.ASSIGNED);
+        delivery = deliveryRepository.save(delivery);
+
+        eventPublisher.publishDeliveryStatusUpdated(
+                delivery.getDeliveryId(), delivery.getOrderId(), DeliveryStatus.ASSIGNED, driverId);
+        return toResponse(delivery);
     }
 
     @Transactional
