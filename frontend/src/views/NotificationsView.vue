@@ -29,14 +29,8 @@
             </span>
           </div>
           <div class="message">{{ item.message }}</div>
-          <div class="meta">
-            <span class="chip">{{ item.channel }}</span>
-            <span class="chip status">{{ item.status }}</span>
-            <button
-              v-if="!isRead(item)"
-              class="mark-one"
-              @click="markOneRead(item)"
-            >
+          <div v-if="!isRead(item)" class="meta">
+            <button class="mark-one" @click="markOneRead(item)">
               Mark as read
             </button>
           </div>
@@ -84,6 +78,35 @@ const EVENT_ICONS = {
 };
 
 const CHANNEL_ICONS = { PUSH: '🔔', EMAIL: '✉️', SMS: '💬' };
+
+// Human-friendly titles per event type. Anup asked us not to surface
+// raw Kafka topic / event-type strings to the user.
+const EVENT_TITLES = {
+  'payment.completed': 'Payment confirmed',
+  'payment.confirmed': 'Payment confirmed',
+  'payment.failed': 'Payment failed',
+  'payment.refunded': 'Refund processed',
+  'delivery.created': 'Courier assigned',
+  'delivery.assigned': 'Courier assigned',
+  'delivery.dispatched': 'Out for delivery',
+  'delivery.status-changed': 'Delivery update',
+  'delivery.completed': 'Order delivered',
+  'order.placed': 'Order placed',
+  'order.confirmed': 'Order confirmed',
+  'order.cancelled': 'Order cancelled',
+  PAYMENT_COMPLETED: 'Payment confirmed',
+  PAYMENT_CONFIRMED: 'Payment confirmed',
+  PAYMENT_FAILED: 'Payment failed',
+  PAYMENT_REFUNDED: 'Refund processed',
+  DELIVERY_CREATED: 'Courier assigned',
+  DELIVERY_ASSIGNED: 'Courier assigned',
+  DELIVERY_DISPATCHED: 'Out for delivery',
+  DELIVERY_STATUS_CHANGED: 'Delivery update',
+  DELIVERY_COMPLETED: 'Order delivered',
+  ORDER_PLACED: 'Order placed',
+  ORDER_CONFIRMED: 'Order confirmed',
+  ORDER_CANCELLED: 'Order cancelled'
+};
 
 export default {
   name: 'NotificationsView',
@@ -153,18 +176,17 @@ export default {
       return '🔔';
     },
     titleFor(item) {
-      if (item && item.eventType) {
-        // Split on both `_` and `.` and `-` so dotted-lowercase
-        // (`payment.completed`) and UPPER_SNAKE (`PAYMENT_COMPLETED`)
-        // both render cleanly.
-        return item.eventType
-          .toLowerCase()
-          .split(/[._-]/)
-          .filter(Boolean)
-          .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
-          .join(' ');
-      }
-      return 'Notification';
+      if (!item || !item.eventType) return 'Notification';
+      // Prefer the friendly mapping. Fall back to a capitalised version
+      // of the event type only for unknown types (so we never leave the
+      // user staring at a raw "delivery.created" string).
+      if (EVENT_TITLES[item.eventType]) return EVENT_TITLES[item.eventType];
+      return item.eventType
+        .toLowerCase()
+        .split(/[._-]/)
+        .filter(Boolean)
+        .map((w) => w.charAt(0).toUpperCase() + w.slice(1))
+        .join(' ');
     },
     formatRelative(iso) {
       if (!iso) return '';
@@ -288,32 +310,10 @@ export default {
 .meta {
   margin-top: 0.4rem;
   display: flex;
-  gap: 0.4rem;
-  align-items: center;
-}
-
-.chip {
-  font-size: 0.7rem;
-  font-weight: 600;
-  text-transform: uppercase;
-  padding: 0.1rem 0.5rem;
-  border-radius: 999px;
-  background: #f1f1f1;
-  color: var(--qb-muted);
-}
-
-.chip.status {
-  background: #eaf6ea;
-  color: #1f7a1f;
-}
-
-.notif.unread .chip.status {
-  background: #fff1d6;
-  color: #8a5a00;
+  justify-content: flex-end;
 }
 
 .mark-one {
-  margin-left: auto;
   background: transparent;
   border: none;
   color: var(--qb-accent);

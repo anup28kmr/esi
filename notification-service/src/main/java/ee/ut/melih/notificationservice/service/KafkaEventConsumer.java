@@ -36,28 +36,44 @@ public class KafkaEventConsumer {
     this.orderClient = orderClient;
   }
 
+  // Human-readable fallback messages. Used only when the producer
+  // does not put a `message` field in the payload, so the customer
+  // never sees raw event-type strings like "delivery.created".
+  private static final Map<String, String> FRIENDLY_DEFAULTS = Map.ofEntries(
+      Map.entry("payment.completed",       "Your payment was confirmed"),
+      Map.entry("payment.confirmed",       "Your payment was confirmed"),
+      Map.entry("payment.failed",          "Your payment failed — please update your payment method"),
+      Map.entry("payment.refunded",        "We refunded your order"),
+      Map.entry("delivery.created",        "A courier was assigned to your order"),
+      Map.entry("delivery.assigned",       "A courier was assigned to your order"),
+      Map.entry("delivery.dispatched",     "Your order is on its way"),
+      Map.entry("delivery.completed",      "Your order has been delivered"),
+      Map.entry("order.placed",            "Your order was placed"),
+      Map.entry("order.confirmed",         "Your order was confirmed"),
+      Map.entry("order.cancelled",         "Your order was cancelled"));
+
   @KafkaListener(topics = KafkaTopics.PAYMENT_EVENTS, groupId = "notification-service")
   @Transactional
   public void onPaymentEvent(EventEnvelope event) {
     log.info("Received {} from {}", event.type(), KafkaTopics.PAYMENT_EVENTS);
-    handle(event, "Payment update: " + event.type());
+    handle(event);
   }
 
   @KafkaListener(topics = KafkaTopics.DELIVERY_EVENTS, groupId = "notification-service")
   @Transactional
   public void onDeliveryEvent(EventEnvelope event) {
     log.info("Received {} from {}", event.type(), KafkaTopics.DELIVERY_EVENTS);
-    handle(event, "Delivery update: " + event.type());
+    handle(event);
   }
 
   @KafkaListener(topics = KafkaTopics.ORDER_EVENTS, groupId = "notification-service")
   @Transactional
   public void onOrderEvent(EventEnvelope event) {
     log.info("Received {} from {}", event.type(), KafkaTopics.ORDER_EVENTS);
-    handle(event, "Order update: " + event.type());
+    handle(event);
   }
 
-  private void handle(EventEnvelope event, String defaultMessage) {
+  private void handle(EventEnvelope event) {
     if (event.id() == null) {
       log.warn("Skipping event with null id (type={})", event.type());
       return;
@@ -78,9 +94,33 @@ public class KafkaEventConsumer {
           event.id());
       return;
     }
-    String message = (String) event.payload().getOrDefault("message", defaultMessage);
+    String message = (String) event.payload().getOrDefault("message", defaultMessageFor(event));
     notificationService.send(
         new SendNotificationRequest(recipientId, Channel.PUSH, message, event.type()));
+  }
+
+  /**
+   * Picks a friendly fallback message when the producer does not
+   * include one in the payload. {@code delivery.status-changed} is
+   * special-cased because the meaning depends on the {@code status}
+   * field (PickedUp, Delivered, ...).
+   */
+  private String defaultMessageFor(EventEnvelope event) {
+    String type = event.type() == null ? "" : event.type().toLowerCase().replace('_', '.');
+    if (type.equals("delivery.status-changed")
+        || type.equals("delivery.status.changed")
+        || type.equals("delivery.statuschanged")) {
+      Object raw = event.payload() == null ? null : event.payload().get("status");
+      String status = raw == null ? "" : raw.toString().toLowerCase().replaceAll("[_-]", "");
+      if (status.contains("pickedup")) return "Your order has been picked up";
+      if (status.contains("delivered")) return "Your order has been delivered";
+      if (status.contains("intransit") || status.contains("dispatched"))
+        return "Your order is on its way";
+      return "Your delivery status was updated";
+    }
+    String mapped = FRIENDLY_DEFAULTS.get(type);
+    if (mapped != null) return mapped;
+    return "You have a new notification";
   }
 
   private boolean claim(UUID eventId) {
