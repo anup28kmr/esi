@@ -330,6 +330,7 @@ services:
     environment:
       <<: *jwt-env
       SPRING_PROFILES_ACTIVE: docker
+      ORDER_SERVICE_URL: http://order-service:7001
     ports:
       - "8087:8087"
     depends_on:

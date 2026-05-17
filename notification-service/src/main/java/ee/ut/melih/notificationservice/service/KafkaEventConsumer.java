@@ -1,5 +1,6 @@
 package ee.ut.melih.notificationservice.service;
 
+import ee.ut.melih.notificationservice.client.OrderClient;
 import ee.ut.melih.notificationservice.config.KafkaTopics;
 import ee.ut.melih.notificationservice.domain.Channel;
 import ee.ut.melih.notificationservice.domain.ProcessedEvent;
@@ -7,6 +8,7 @@ import ee.ut.melih.notificationservice.dto.EventEnvelope;
 import ee.ut.melih.notificationservice.dto.SendNotificationRequest;
 import ee.ut.melih.notificationservice.repository.ProcessedEventRepository;
 import java.util.Map;
+import java.util.Optional;
 import java.util.UUID;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
@@ -24,11 +26,14 @@ public class KafkaEventConsumer {
 
   private final NotificationService notificationService;
   private final ProcessedEventRepository processedEvents;
+  private final OrderClient orderClient;
 
   public KafkaEventConsumer(NotificationService notificationService,
-                            ProcessedEventRepository processedEvents) {
+                            ProcessedEventRepository processedEvents,
+                            OrderClient orderClient) {
     this.notificationService = notificationService;
     this.processedEvents = processedEvents;
+    this.orderClient = orderClient;
   }
 
   @KafkaListener(topics = KafkaTopics.PAYMENT_EVENTS, groupId = "notification-service")
@@ -58,13 +63,18 @@ public class KafkaEventConsumer {
       return;
     }
     if (!claim(event.id())) {
-      // Duplicate delivery (A3 §6.2 at-least-once). Acknowledge and move on.
       log.info("Skipping duplicate event {}", event.id());
       return;
     }
     UUID recipientId = resolveRecipient(event.payload());
     if (recipientId == null) {
-      log.warn("Skipping event {} — no recipientId/customerId/userId/driverId in payload",
+      // Fallback per A3 §6.2: the spec payload only carries domain ids
+      // (paymentId, deliveryId, orderId). When the producer omits a
+      // user id, look the customer up via Order Service.
+      recipientId = lookupCustomerByOrder(event.payload()).orElse(null);
+    }
+    if (recipientId == null) {
+      log.warn("Skipping event {} — no recipient could be resolved from payload or order lookup",
           event.id());
       return;
     }
@@ -73,11 +83,6 @@ public class KafkaEventConsumer {
         new SendNotificationRequest(recipientId, Channel.PUSH, message, event.type()));
   }
 
-  /**
-   * Inserts the event id into the idempotency table. Returns true if
-   * this was the first time we saw the id; false if it was already
-   * present (duplicate).
-   */
   private boolean claim(UUID eventId) {
     if (processedEvents.existsById(eventId)) {
       return false;
@@ -98,10 +103,39 @@ public class KafkaEventConsumer {
         try {
           return UUID.fromString(value.toString());
         } catch (IllegalArgumentException ignored) {
-          // fall through
+          // not a UUID — try the next key
         }
       }
     }
     return null;
+  }
+
+  private Optional<UUID> lookupCustomerByOrder(Map<String, Object> payload) {
+    if (payload == null) return Optional.empty();
+    Object raw = payload.get("orderId");
+    if (raw == null) return Optional.empty();
+    return parseOrderId(raw.toString())
+        .flatMap(orderClient::getCustomerIdForOrder);
+  }
+
+  /**
+   * Order Service uses {@code Long} order ids, but Payment / Delivery
+   * services sometimes stringify them as zero-padded UUIDs (e.g.
+   * {@code 00000000-0000-0000-0000-000000000001}). Accept either form
+   * by trying plain Long first, then the UUID's trailing hex group.
+   */
+  private static Optional<Long> parseOrderId(String input) {
+    if (input == null || input.isBlank()) return Optional.empty();
+    try {
+      return Optional.of(Long.parseLong(input.trim()));
+    } catch (NumberFormatException ignored) {
+      // fall through
+    }
+    String tail = input.contains("-") ? input.substring(input.lastIndexOf('-') + 1) : input;
+    try {
+      return Optional.of(Long.parseLong(tail, 16));
+    } catch (NumberFormatException ignored) {
+      return Optional.empty();
+    }
   }
 }
