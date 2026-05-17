@@ -46,3 +46,6 @@ springdoc:
 jwt:
   secret: ${JWT_SECRET:dGVzdC1zZWNyZXQtZm9yLWRldi1vbmx5LWRvLW5vdC11c2UtaW4tcHJvZC0xMjM0NTY=}
   issuer: ${JWT_ISSUER:quickbite-user-service}
+
+order-service:
+  url: ${ORDER_SERVICE_URL:http://localhost:7001}

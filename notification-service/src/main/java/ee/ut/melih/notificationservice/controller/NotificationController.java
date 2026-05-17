@@ -77,7 +77,7 @@ public class NotificationController {
   }
 
   @PostMapping("/send")
-  @Operation(summary = "Internal send endpoint used for admin actions and tests")
+  @Operation(summary = "Internal send endpoint — only callable with a SERVICE-scoped JWT issued for service-to-service traffic")
   public ResponseEntity<NotificationResponse> send(
       @AuthenticationPrincipal AuthenticatedUser user,
       @Valid @RequestBody SendNotificationRequest request) {
