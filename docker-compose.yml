@@ -77,6 +77,9 @@ services:
       MENU_SERVICE_URL: http://menu-service:8082
       PAYMENT_SERVICE_URL: http://payment-service:8085
       DELIVERY_SERVICE_URL: http://delivery-service:8086
+      # DeliveryEventConsumer subscribes to `delivery-events` here to
+      # mirror PICKED_UP / DELIVERED into the order row.
+      KAFKA_BOOTSTRAP_SERVERS: kafka:9092
     ports:
       - "7001:7001"
     depends_on:
@@ -92,6 +95,8 @@ services:
         condition: service_started
       delivery-service:
         condition: service_started
+      kafka:
+        condition: service_healthy
     networks: [quickbite-net]
 
   # ─── api-gateway ──────────────────────────────────────────────────────────
