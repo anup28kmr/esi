@@ -44,5 +44,5 @@ springdoc:
 logging:
   level:
     root: INFO
-    ee.ut.anup.userservice: INFO
+    ee.ut.quickbite.userservice: INFO
     org.springframework.web: INFO
