@@ -133,7 +133,6 @@ For development, you can generate valid JWT tokens for different roles using the
 
 # Specific role
 ./scripts/mint-jwt.sh customer
-./scripts/mint-jwt.sh admin
 ```
 
 ---

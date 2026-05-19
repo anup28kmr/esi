@@ -53,8 +53,6 @@ class MenuServiceTest {
         UUID.fromString("00000000-0000-0000-0000-000000000001");
     private static final UUID OTHER_OWNER_ID =
         UUID.fromString("00000000-0000-0000-0000-000000000002");
-    private static final UUID ADMIN_ID =
-        UUID.fromString("00000000-0000-0000-0000-0000000000a1");
 
     private static final Instant FIXED_NOW = Instant.parse("2026-04-19T12:00:00Z");
 
@@ -260,7 +258,7 @@ class MenuServiceTest {
     }
 
     @Test
-    void create_deniedWhenCallerIsNotOwnerOrAdmin() {
+    void create_deniedWhenCallerIsNotOwner() {
         when(currentUser.require()).thenReturn(
             new AuthenticatedUser(OTHER_OWNER_ID, "RestaurantOwner", "USER", null));
         when(restaurantOwnership.findOwnerId(RESTAURANT_ID)).thenReturn(Optional.of(OWNER_ID));
@@ -279,34 +277,9 @@ class MenuServiceTest {
         ))).isInstanceOf(RestaurantNotFoundForMenuException.class);
     }
 
-    @Test
-    void create_adminBypassesOwnershipCheck() {
-        when(currentUser.require()).thenReturn(
-            new AuthenticatedUser(ADMIN_ID, "Admin", "USER", null));
-        when(menuItems.save(any(MenuItem.class))).thenAnswer(inv -> inv.getArgument(0));
-
-        MenuItemResponse response = service.create(RESTAURANT_ID, new CreateMenuItemRequest(
-            "Admin Added", null, new BigDecimal("5.00"), "EUR", "Main", true
-        ));
-
-        assertThat(response.name()).isEqualTo("Admin Added");
-    }
 
     @Test
-    void create_failsWhenAdminTargetsMissingRestaurant() {
-        lenient().when(currentUser.require()).thenReturn(
-            new AuthenticatedUser(ADMIN_ID, "Admin", "USER", null));
-        when(restaurantOwnership.findOwnerId(RESTAURANT_ID)).thenReturn(Optional.empty());
-
-        assertThatThrownBy(() -> service.create(RESTAURANT_ID, new CreateMenuItemRequest(
-            "Orphan", null, new BigDecimal("5.00"), "EUR", "Main", true
-        ))).isInstanceOf(RestaurantNotFoundForMenuException.class);
-
-        verify(menuItems, never()).save(any(MenuItem.class));
-    }
-
-    @Test
-    void delete_deniedWhenCallerIsNotOwnerOrAdmin() {
+    void delete_deniedWhenCallerIsNotOwner() {
         UUID id = UUID.randomUUID();
         MenuItem existing = new MenuItem(RESTAURANT_ID, "X", null,
             new Price(new BigDecimal("5.00"), "EUR"), "Main", true);

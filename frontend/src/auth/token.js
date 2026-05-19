@@ -114,7 +114,7 @@ export function readRole() {
 // eslint-disable-next-line no-unused-vars
 export function canManageRestaurants() {
   const role = readRole();
-  return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
+  return role === 'RESTAURANT_OWNER';
 }
 
 export function isRestaurantOwner() {

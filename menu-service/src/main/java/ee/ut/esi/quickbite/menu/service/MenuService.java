@@ -75,7 +75,7 @@ public class MenuService {
     public MenuItemResponse create(UUID restaurantId, CreateMenuItemRequest req) {
         UUID ownerId = restaurantOwnership.findOwnerId(restaurantId)
             .orElseThrow(() -> new RestaurantNotFoundForMenuException(restaurantId));
-        requireOwnerOrAdmin(restaurantId, ownerId,
+        requireOwner(restaurantId, ownerId,
             "POST /restaurants/" + restaurantId + "/menu-items");
         validatePrice(req.priceAmount());
         warnIfUnknownCategory(req.category());
@@ -104,7 +104,7 @@ public class MenuService {
     @Transactional
     public MenuItemResponse update(UUID id, UpdateMenuItemRequest req) {
         MenuItem m = requireMenuItem(id);
-        requireOwnerOrAdmin(m.getRestaurantId(), "PUT /menu-items/" + id);
+        requireOwner(m.getRestaurantId(), "PUT /menu-items/" + id);
         validatePrice(req.priceAmount());
         warnIfUnknownCategory(req.category());
         boolean previousAvailability = m.isAvailable();
@@ -136,26 +136,20 @@ public class MenuService {
     @Transactional
     public void delete(UUID id) {
         MenuItem m = requireMenuItem(id);
-        requireOwnerOrAdmin(m.getRestaurantId(), "DELETE /menu-items/" + id);
+        requireOwner(m.getRestaurantId(), "DELETE /menu-items/" + id);
         menuItems.delete(m);
         log.info("menu item deleted menuItemId={} restaurantId={}", id, m.getRestaurantId());
     }
 
-    private void requireOwnerOrAdmin(UUID restaurantId, String endpoint) {
+    private void requireOwner(UUID restaurantId, String endpoint) {
         AuthenticatedUser actor = currentUser.require();
-        if (SecurityRoles.ADMIN.equals(actor.role())) {
-            return;
-        }
         UUID ownerId = restaurantOwnership.findOwnerId(restaurantId)
             .orElseThrow(() -> new RestaurantNotFoundForMenuException(restaurantId));
         denyIfNotOwner(actor, restaurantId, ownerId, endpoint);
     }
 
-    private void requireOwnerOrAdmin(UUID restaurantId, UUID knownOwnerId, String endpoint) {
+    private void requireOwner(UUID restaurantId, UUID knownOwnerId, String endpoint) {
         AuthenticatedUser actor = currentUser.require();
-        if (SecurityRoles.ADMIN.equals(actor.role())) {
-            return;
-        }
         denyIfNotOwner(actor, restaurantId, knownOwnerId, endpoint);
     }
 

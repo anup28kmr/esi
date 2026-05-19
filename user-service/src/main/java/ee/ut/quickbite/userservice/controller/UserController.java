@@ -53,7 +53,7 @@ public class UserController {
 
   @Operation(
       summary = "Register a new user account",
-      description = "Register a new user (customer, driver, restaurant owner, or admin)")
+      description = "Register a new user (customer, driver, or restaurant owner)")
   @ApiResponses({
     @ApiResponse(
         responseCode = "201",

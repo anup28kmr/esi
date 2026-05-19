@@ -16,7 +16,6 @@
 #   scripts/mint-jwt.sh owner-2      # owns d0000003 (closed) + d0000004
 #   scripts/mint-jwt.sh owner-3      # owns d0000005 + d0000006 (closed)
 #   scripts/mint-jwt.sh customer     # Customer role (no ownership)
-#   scripts/mint-jwt.sh admin        # Admin role (bypasses ownership)
 #   scripts/mint-jwt.sh custom <userUuid> <role>
 #
 # Pipe straight into curl:
@@ -36,7 +35,6 @@ case "${1:-owner-1}" in
   owner-2)  SUB="00000000-0000-0000-0000-000000000002"; ROLE="RestaurantOwner" ;;
   owner-3)  SUB="00000000-0000-0000-0000-000000000003"; ROLE="RestaurantOwner" ;;
   customer) SUB="00000000-0000-0000-0000-0000000000c1"; ROLE="Customer" ;;
-  admin)    SUB="00000000-0000-0000-0000-0000000000a1"; ROLE="Admin" ;;
   custom)
     SUB="${2:?custom profile requires <userUuid> <role>}"
     ROLE="${3:?custom profile requires <userUuid> <role>}"
@@ -46,7 +44,7 @@ case "${1:-owner-1}" in
     exit 0
     ;;
   *)
-    echo "Unknown profile: $1 (try owner-1|owner-2|owner-3|customer|admin|custom)" >&2
+    echo "Unknown profile: $1 (try owner-1|owner-2|owner-3|customer|custom)" >&2
     exit 2
     ;;
 esac

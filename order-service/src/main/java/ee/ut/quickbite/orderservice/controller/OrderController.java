@@ -116,7 +116,7 @@ public class OrderController {
             @ApiResponse(responseCode = "409", description = "Order is not in CONFIRMED state",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PreAuthorize("hasAnyRole('RestaurantOwner', 'Admin')")
+    @PreAuthorize("hasRole('RestaurantOwner')")
     @PostMapping("/{id}/accept")
     public ResponseEntity<OrderResponse> acceptOrder(
             @PathVariable Long id,
@@ -139,7 +139,7 @@ public class OrderController {
             @ApiResponse(responseCode = "409", description = "Order is not in CONFIRMED state",
                     content = @Content(schema = @Schema(implementation = ErrorResponse.class)))
     })
-    @PreAuthorize("hasAnyRole('RestaurantOwner', 'Admin')")
+    @PreAuthorize("hasRole('RestaurantOwner')")
     @PostMapping("/{id}/reject")
     public ResponseEntity<OrderResponse> rejectOrder(
             @PathVariable Long id,

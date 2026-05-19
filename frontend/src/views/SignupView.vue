@@ -44,21 +44,16 @@ export default {
   },
   methods: {
     async onSubmit() {
-      console.log('[SignupView] onSubmit called');
-      console.log('[SignupView] Form data:', { email: this.email, role: this.role });
       this.error = '';
       this.submitting = true;
       try {
-        console.log('[SignupView] Sending POST /api/users');
-        const result = await api.post('/api/users', {
+        await api.post('/api/users', {
           email: this.email,
           password: this.password,
           role: this.role
         });
-        console.log('[SignupView] Signup successful, result:', result);
         this.$router.push({ name: 'login', query: { registered: '1' } });
       } catch (err) {
-        console.error('[SignupView] Signup error:', err);
         this.error = err instanceof ApiError ? err.message : 'Sign-up failed.';
       } finally {
         this.submitting = false;

@@ -141,7 +141,7 @@ class RestaurantServiceTest {
     }
 
     @Test
-    void update_deniedWhenCallerIsNotOwnerOrAdmin() {
+    void update_deniedWhenCallerIsNotOwner() {
         UUID id = UUID.randomUUID();
         Restaurant existing = new Restaurant(OWNER_ID, "Old Name",
             new Location("Addr", "Tartu", 58.0, 26.0), "10:00-20:00");
@@ -156,26 +156,9 @@ class RestaurantServiceTest {
         ))).isInstanceOf(AccessDeniedException.class);
     }
 
-    @Test
-    void update_adminPassesOwnershipCheck() {
-        UUID id = UUID.randomUUID();
-        Restaurant existing = new Restaurant(OWNER_ID, "Old Name",
-            new Location("Addr", "Tartu", 58.0, 26.0), "10:00-20:00");
-        when(restaurants.findById(eq(id))).thenReturn(Optional.of(existing));
-        AuthenticatedUser admin = new AuthenticatedUser(
-            UUID.fromString("00000000-0000-0000-0000-0000000000a1"),
-            "Admin", "USER", null);
-        when(currentUser.require()).thenReturn(admin);
-
-        RestaurantResponse updated = service.update(id, new UpdateRestaurantRequest(
-            "Admin Rename", "Addr", "Tartu", 58.0, 26.0, "11:00-22:00"
-        ));
-
-        assertThat(updated.name()).isEqualTo("Admin Rename");
-    }
 
     @Test
-    void setStatus_deniedWhenCallerIsNotOwnerOrAdmin() {
+    void setStatus_deniedWhenCallerIsNotOwner() {
         UUID id = UUID.randomUUID();
         Restaurant existing = new Restaurant(OWNER_ID, "Old Name",
             new Location("Addr", "Tartu", 58.0, 26.0), "10:00-20:00");
@@ -245,20 +228,6 @@ class RestaurantServiceTest {
         assertThat(ownerCaptor.getValue()).isEqualTo(OWNER_ID);
     }
 
-    @Test
-    void search_doesNotScopeForAdmin() {
-        AuthenticatedUser admin = new AuthenticatedUser(
-            UUID.fromString("00000000-0000-0000-0000-0000000000a1"),
-            "Admin", "USER", null);
-        when(currentUser.current()).thenReturn(Optional.of(admin));
-        when(restaurants.search(isNull(), isNull(), isNull(), any(Pageable.class)))
-            .thenReturn(new PageImpl<>(List.of()));
-
-        service.search(null, null, Pageable.unpaged());
-
-        org.mockito.Mockito.verify(restaurants)
-            .search(isNull(), isNull(), isNull(), any(Pageable.class));
-    }
 
     @Test
     void search_doesNotScopeForUnauthenticated() {
@@ -300,21 +269,6 @@ class RestaurantServiceTest {
         assertThat(response.name()).isEqualTo("Pizza Antonio");
     }
 
-    @Test
-    void findById_allowedForAdminEvenIfNotOwner() {
-        UUID id = UUID.randomUUID();
-        Restaurant existing = new Restaurant(OWNER_ID, "Pizza Antonio",
-            new Location("Addr", "Tartu", 58.0, 26.0), "11:00-22:00");
-        when(restaurants.findById(id)).thenReturn(Optional.of(existing));
-        AuthenticatedUser admin = new AuthenticatedUser(
-            UUID.fromString("00000000-0000-0000-0000-0000000000a1"),
-            "Admin", "USER", null);
-        when(currentUser.current()).thenReturn(Optional.of(admin));
-
-        RestaurantResponse response = service.findById(id);
-
-        assertThat(response.name()).isEqualTo("Pizza Antonio");
-    }
 
     @Test
     void findById_allowedForUnauthenticatedBrowser() {

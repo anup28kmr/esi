@@ -78,7 +78,7 @@ export default {
       // eslint-disable-next-line no-unused-expressions
       authStateVersion.value;
       const role = readRole();
-      return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
+      return role === 'RESTAURANT_OWNER';
     },
     isDriver() {
       // eslint-disable-next-line no-unused-expressions

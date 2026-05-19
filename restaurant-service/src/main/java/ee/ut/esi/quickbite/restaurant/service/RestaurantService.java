@@ -88,7 +88,7 @@ public class RestaurantService {
     @Transactional
     public RestaurantResponse update(UUID id, UpdateRestaurantRequest req) {
         Restaurant r = requireRestaurant(id);
-        requireOwnerOrAdmin(r, "PUT /restaurants/" + id);
+        requireOwner(r, "PUT /restaurants/" + id);
         if (restaurants.existsByOwnerIdAndNameIgnoreCaseAndRestaurantIdNot(r.getOwnerId(), req.name(), id)) {
             throw new DuplicateRestaurantException(r.getOwnerId(), req.name());
         }
@@ -100,16 +100,13 @@ public class RestaurantService {
     @Transactional
     public RestaurantResponse setStatus(UUID id, boolean isOpen) {
         Restaurant r = requireRestaurant(id);
-        requireOwnerOrAdmin(r, "PATCH /restaurants/" + id + "/status");
+        requireOwner(r, "PATCH /restaurants/" + id + "/status");
         r.setStatus(isOpen);
         return RestaurantResponse.from(r);
     }
 
-    private void requireOwnerOrAdmin(Restaurant r, String endpoint) {
+    private void requireOwner(Restaurant r, String endpoint) {
         AuthenticatedUser actor = currentUser.require();
-        if (SecurityRoles.ADMIN.equals(actor.role())) {
-            return;
-        }
         if (actor.userId().equals(r.getOwnerId())) {
             return;
         }

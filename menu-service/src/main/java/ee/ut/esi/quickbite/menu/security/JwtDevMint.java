@@ -16,8 +16,6 @@ public final class JwtDevMint {
         UUID.fromString("00000000-0000-0000-0000-0000000000c1");
     public static final UUID DEFAULT_OWNER_USER_ID =
         UUID.fromString("00000000-0000-0000-0000-000000000001");
-    public static final UUID DEFAULT_ADMIN_USER_ID =
-        UUID.fromString("00000000-0000-0000-0000-0000000000a1");
 
     private JwtDevMint() {
     }

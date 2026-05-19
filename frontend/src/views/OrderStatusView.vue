@@ -160,7 +160,7 @@ export default {
     isLoggedIn() { return isAuthenticated(); },
     isOwner() {
       const role = readRole();
-      return role === 'RESTAURANT_OWNER' || role === 'ADMIN';
+      return role === 'RESTAURANT_OWNER';
     },
     pageTitle() {
       if (this.id) return 'Order';

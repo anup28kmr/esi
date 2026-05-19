@@ -28,7 +28,7 @@ CREATE TABLE users (
     CONSTRAINT pk_users PRIMARY KEY (user_id),
     CONSTRAINT uk_users_email UNIQUE (email),
     CONSTRAINT chk_users_role
-        CHECK (role IS NULL OR role IN ('CUSTOMER', 'DRIVER', 'RESTAURANT_OWNER', 'ADMIN')),
+        CHECK (role IS NULL OR role IN ('CUSTOMER', 'DRIVER', 'RESTAURANT_OWNER')),
     CONSTRAINT chk_users_status
         CHECK (status IS NULL OR status IN ('ACTIVE', 'SUSPENDED'))
 );

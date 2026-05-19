@@ -51,7 +51,7 @@ public class User {
     }
 
     public enum Role {
-        CUSTOMER, DRIVER, RESTAURANT_OWNER, ADMIN;
+        CUSTOMER, DRIVER, RESTAURANT_OWNER;
 
         @JsonCreator
         public static Role fromValue(String value) {
@@ -72,7 +72,6 @@ public class User {
                 case "CUSTOMER" -> CUSTOMER;
                 case "DRIVER" -> DRIVER;
                 case "RESTAURANT_OWNER" -> RESTAURANT_OWNER;
-                case "ADMIN" -> ADMIN;
                 default -> throw new IllegalArgumentException("Unknown role: " + value);
             };
         }

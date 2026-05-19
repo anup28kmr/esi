@@ -57,7 +57,6 @@ class RestaurantControllerTest {
 
     private String customerToken;
     private String ownerToken;
-    private String adminToken;
 
     @BeforeEach
     void setUp() {
@@ -65,8 +64,6 @@ class RestaurantControllerTest {
             JwtDevMint.DEFAULT_CUSTOMER_USER_ID, "dev-customer", "Customer");
         ownerToken = JwtDevMint.mint(jwt.secret(), jwt.issuer(), jwt.ttl(),
             JwtDevMint.DEFAULT_OWNER_USER_ID, "dev-owner", "RestaurantOwner");
-        adminToken = JwtDevMint.mint(jwt.secret(), jwt.issuer(), jwt.ttl(),
-            JwtDevMint.DEFAULT_ADMIN_USER_ID, "dev-admin", "Admin");
     }
 
     @Test
@@ -149,15 +146,6 @@ class RestaurantControllerTest {
             .andExpect(jsonPath("$.name").value("Pizza Antonio"));
     }
 
-    @Test
-    void createRestaurant_adminTokenAlsoAccepted() throws Exception {
-        when(service.create(any())).thenReturn(sampleResponse());
-        mvc.perform(post("/restaurants")
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + adminToken)
-                .content(validCreateBody()))
-            .andExpect(status().isCreated());
-    }
 
     @Test
     void createRestaurant_missingNameReturns400() throws Exception {
@@ -268,15 +256,6 @@ class RestaurantControllerTest {
         verifyNoInteractions(service);
     }
 
-    @Test
-    void patchStatus_adminBypassesOwnership() throws Exception {
-        when(service.setStatus(eq(RESTAURANT_ID), eq(true))).thenReturn(sampleResponse());
-        mvc.perform(patch("/restaurants/{id}/status", RESTAURANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + adminToken)
-                .content("{\"isOpen\": true}"))
-            .andExpect(status().isOk());
-    }
 
     private static String validCreateBody() {
         return bodyWithHours("11:00-22:00");

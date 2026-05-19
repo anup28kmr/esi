@@ -68,7 +68,6 @@ public class JwtService {
             case CUSTOMER -> "Customer";
             case DRIVER -> "Driver";
             case RESTAURANT_OWNER -> "RestaurantOwner";
-            case ADMIN -> "Admin";
         };
     }
 

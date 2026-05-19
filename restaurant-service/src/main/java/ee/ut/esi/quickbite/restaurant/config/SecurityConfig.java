@@ -53,13 +53,13 @@ public class SecurityConfig {
                 .requestMatchers(HttpMethod.GET, "/restaurants/{id:[0-9a-fA-F-]+}").permitAll()
                 // Availability: any valid token (customer/owner/driver/admin/service) per 0010 §8.
                 .requestMatchers(HttpMethod.GET, "/restaurants/*/availability").authenticated()
-                // Mutations: restaurant owner or admin.
+                // Mutations: restaurant owner.
                 .requestMatchers(HttpMethod.POST,   "/restaurants")
-                    .hasAnyRole(SecurityRoles.RESTAURANT_OWNER, SecurityRoles.ADMIN)
+                    .hasRole(SecurityRoles.RESTAURANT_OWNER)
                 .requestMatchers(HttpMethod.PUT,    "/restaurants/*")
-                    .hasAnyRole(SecurityRoles.RESTAURANT_OWNER, SecurityRoles.ADMIN)
+                    .hasRole(SecurityRoles.RESTAURANT_OWNER)
                 .requestMatchers(HttpMethod.PATCH,  "/restaurants/*/status")
-                    .hasAnyRole(SecurityRoles.RESTAURANT_OWNER, SecurityRoles.ADMIN)
+                    .hasRole(SecurityRoles.RESTAURANT_OWNER)
                 .anyRequest().authenticated())
             .addFilterBefore(jwtAuthFilter, UsernamePasswordAuthenticationFilter.class);
         return http.build();

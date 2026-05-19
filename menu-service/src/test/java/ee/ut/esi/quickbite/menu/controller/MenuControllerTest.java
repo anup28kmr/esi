@@ -60,7 +60,6 @@ class MenuControllerTest {
 
     private String customerToken;
     private String ownerToken;
-    private String adminToken;
 
     @BeforeEach
     void setUp() {
@@ -68,8 +67,6 @@ class MenuControllerTest {
             JwtDevMint.DEFAULT_CUSTOMER_USER_ID, "dev-customer", "Customer");
         ownerToken = JwtDevMint.mint(jwt.secret(), jwt.issuer(), jwt.ttl(),
             JwtDevMint.DEFAULT_OWNER_USER_ID, "dev-owner", "RestaurantOwner");
-        adminToken = JwtDevMint.mint(jwt.secret(), jwt.issuer(), jwt.ttl(),
-            JwtDevMint.DEFAULT_ADMIN_USER_ID, "dev-admin", "Admin");
     }
 
     @Test
@@ -127,29 +124,6 @@ class MenuControllerTest {
             .andExpect(jsonPath("$.name").value("Margherita"));
     }
 
-    @Test
-    void createMenuItem_adminTokenAlsoAccepted() throws Exception {
-        when(service.create(eq(RESTAURANT_ID), any())).thenReturn(sampleResponse());
-        mvc.perform(post("/restaurants/{rid}/menu-items", RESTAURANT_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + adminToken)
-                .content(validCreateBody()))
-            .andExpect(status().isCreated());
-    }
-
-    @Test
-    void createMenuItem_adminUnknownRestaurantReturns404() throws Exception {
-        UUID unknownRestaurantId = UUID.fromString("ffffffff-ffff-ffff-ffff-ffffffffffff");
-        when(service.create(eq(unknownRestaurantId), any()))
-            .thenThrow(new RestaurantNotFoundForMenuException(unknownRestaurantId));
-        mvc.perform(post("/restaurants/{rid}/menu-items", unknownRestaurantId)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + adminToken)
-                .content(validCreateBody()))
-            .andExpect(status().isNotFound())
-            .andExpect(jsonPath("$.status").value(404))
-            .andExpect(jsonPath("$.error").value("Not Found"));
-    }
 
     @Test
     void createMenuItem_zeroPriceReturns400() throws Exception {
@@ -256,15 +230,6 @@ class MenuControllerTest {
             .andExpect(status().isForbidden());
     }
 
-    @Test
-    void putMenuItem_adminBypassesOwnership() throws Exception {
-        when(service.update(eq(MENU_ITEM_ID), any())).thenReturn(sampleResponse());
-        mvc.perform(put("/menu-items/{id}", MENU_ITEM_ID)
-                .contentType(MediaType.APPLICATION_JSON)
-                .header("Authorization", "Bearer " + adminToken)
-                .content(validCreateBody()))
-            .andExpect(status().isOk());
-    }
 
     @Test
     void deleteMenuItem_notFoundReturns404() throws Exception {

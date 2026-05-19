@@ -188,7 +188,6 @@ export default {
     };
     setCurrentUser(profile);
     } catch (err) {
-    console.error('[UserView] loadProfile error:', err);
     this.error = err instanceof ApiError ? err.message : 'Failed to load profile.';
     } finally {
     this.loading = false;
@@ -219,20 +218,6 @@ export default {
       payload.password = this.form.password.trim();
     }
 
-    console.log('[UserView] ========== SAVE CHANGES CLICKED ==========');
-    console.log('[UserView] form.userId:', this.form.userId);
-    console.log('[UserView] form.email:', this.form.email);
-    console.log('[UserView] form.fullName:', this.form.fullName);
-    console.log('[UserView] form.phoneNumber:', this.form.phoneNumber);
-    console.log('[UserView] form.role:', this.form.role);
-    console.log('[UserView] form.status:', this.form.status);
-    console.log('[UserView] form.password:', this.form.password ? '***provided***' : 'empty');
-    console.log('[UserView] address.street:', this.address.street);
-    console.log('[UserView] address.city:', this.address.city);
-    console.log('[UserView] address.postalCode:', this.address.postalCode);
-    console.log('[UserView] Final payload:', JSON.stringify(payload, null, 2));
-
-    console.log('[UserView] Calling API: PUT http://localhost:9090/api/users/' + this.form.userId);
     const updated = await api.put(`/api/users/${this.form.userId}`, payload);
     this.profile = updated;
     this.form.userId = updated.userId ?? this.form.userId;
@@ -246,7 +231,6 @@ export default {
     setCurrentUser(updated);
     this.success = 'Profile updated successfully.';
     } catch (err) {
-    console.error('[UserView] update error:', err);
     this.formError = err instanceof ApiError ? err.message : 'Failed to update profile.';
     } finally {
     this.saving = false;
